@@ -3969,6 +3969,9 @@ async function rmLoad(){
 { const _h3 = VIEWS.home; VIEWS.home = function(){ const h = _h3(); if(RM.state!=="missing") return h;
   return h.replace('<div class="stack">', `<div class="stack"><div class="banner" style="margin:0"><b>Class videos are not loading.</b> The file <b>recordings-main.json</b> is missing from Drive › Indian Painting Studio › App data. Upload it there, then reload this page.</div>`); }; }
 
+/* ---- Learning tabs in the order Anuprita uses them: Workshops, Recordings, Theme Reference, then courses and subscriptions */
+{ const g = NAV.find(g=>g[0]==="learnG"); if(g){ const want = ["workshops","recs","themes","learn","subs","library"]; g[2] = [...want.filter(k=>g[2].includes(k)), ...g[2].filter(k=>!want.includes(k))]; } }
+
 window.__studio={get S(){return S;},toast,savePainting,ACTS,downloadJournal,retryFailed};
 boot();
 })();
