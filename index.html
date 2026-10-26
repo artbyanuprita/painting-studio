@@ -3982,6 +3982,35 @@ if(S.ui.wsub==="records") S.ui.wsub = "platforms";
     btns.sort((a,b)=>{ const ia = order.indexOf(key(a)), ib = order.indexOf(key(b)); return (ia<0?99:ia)-(ib<0?99:ib); });
     return `<div class="chips">${btns.join("")}</div>`; }); }; }
 
+/* ---- Book: match each chapter to the art forms its workshops are filed under (exact names), not loose word guesses */
+const CH_ART = [
+ ["madhubani",["mithila painting","madhubani","tantrik mithila","mithila and related arts","tantrik madhubani","madhubani masterclass","kohbar"],["mithila","madhubani"]],
+ ["bengal patt",["bengal patachitra","mansa pat"],["bengal pat"]],
+ ["odisha patt",["patachitra","pattachitra","odisha pattachitra"],["pattachitra","patachitra"]],
+ ["aipan",["aipan"],["aipan"]], ["alpona",[],["alpona"]], ["aripan",["aripan"],["aripan"]],
+ ["assamese",["assam sattariya"],["assamese","sattriya","sattariya"]], ["basohli",["basholi","basohli"],["basohli","basholi"]],
+ ["batik",["batik"],["batik"]], ["bhil",["bhil"],["bhil"]], ["bikaner",["bikaner painting","bikaner"],["bikaner"]], ["bundi",[],["bundi"]],
+ ["cheriyal",["cheriyal","patachitra cheriyal"],["cheriyal"]], ["chitrakathi",["chitrakathi"],["chitrakathi"]], ["chittara",["chittara"],["chittara"]],
+ ["deccani",["deccani scroll painting"],["deccani"]], ["ganjifa",[],["ganjifa"]], ["godna",["godhna"],["godhna","godna"]], ["gond",["gond"],["gond"]],
+ ["guler",[],["guler"]], ["blue pottery",["blue pottery"],["blue pottery"]], ["kalamezhuthu",[],["kalamezhuthu"]], ["kalamkari",["kalamkari"],["kalamkari"]],
+ ["kalighat",["kalighat"],["kalighat"]], ["kangra",["kangra"],["kangra"]], ["kavad",["kavad"],["kavad"]], ["kerala mural",["kerala mural"],["kerala mural"]],
+ ["kishangarh",["kishangarh"],["kishangarh"]], ["kolam",[],["kolam"]], ["lippan",[],["lippan"]], ["mandana",["meena mandna","mandana"],["mandana","mandna"]],
+ ["manjusha",["manjusha"],["manjusha"]], ["mata ni pachedi",["mnp","mata ni pachedi"],["pachedi"]], ["mughal",[],["mughal"]], ["mysore",["mysore"],["mysore"]],
+ ["nirmal",[],["nirmal"]], ["palm leaf",["palm leaf"],["palm leaf"]], ["phad",["phad"],["phad"]], ["pichwai",["pichwai painting","pichwai"],["pichwai"]],
+ ["pithora",["pithora"],["pithora"]], ["rajasthani",["miniature","rajasthani miniature","jaipur art"],["rajasthani"]], ["rogan",[],["rogan","roghan"]],
+ ["sanjhi",["sanjhi"],["sanjhi"]], ["santhal",["santhal"],["santhal"]], ["saura",["saura"],["saura"]], ["sohrai",["sohrai"],["sohrai"]],
+ ["tanjore",["tanjore"],["tanjore","thanjavur"]], ["thangka",["thangka"],["thangka"]], ["tikuli",["tikuli"],["tikuli"]], ["usta",["usta kala"],["usta kala"]], ["warli",["warli"],["warli"]]];
+{ const _cr = chapRecs; chapRecs = function(ch){
+  const n = alNorm(ch); const m = CH_ART.find(([k])=>n.includes(k)); if(!m) return _cr(ch);
+  const arts = new Set(m[1]); const re = m[2].length ? new RegExp("\\b(" + m[2].map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|") + ")\\b", "i") : null;
+  const loose = a => !a || a==="contemporary" || a==="other" || a==="shilpashastra";
+  return recIndex().all.filter(x=>{ const a = String(recArt(x.wid)||"").trim().toLowerCase(); if(arts.has(a)) return true; return re && loose(a) && re.test(recTitle(x.wid)); }); }; }
+
+/* ---- Book list on phones: the chapter name and its journal line take the full width; the pill and Journal button go below (nothing overlaps) */
+{ const st = document.createElement("style");
+  st.textContent = `.chap>summary.item{flex-wrap:wrap;row-gap:6px}.chap>summary.item>.grow{flex:1 1 100%;min-width:0}.chap>summary.item>.grow .row{flex-wrap:wrap!important;row-gap:2px}.chap>summary.item>.pill{white-space:normal}`;
+  document.head.appendChild(st); }
+
 window.__studio={get S(){return S;},toast,savePainting,ACTS,downloadJournal,retryFailed};
 boot();
 })();
