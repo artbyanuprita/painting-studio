@@ -3972,6 +3972,16 @@ async function rmLoad(){
 /* ---- Learning tabs in the order Anuprita uses them: Workshops, Recordings, Theme Reference, then courses and subscriptions */
 { const g = NAV.find(g=>g[0]==="learnG"); if(g){ const want = ["workshops","recs","themes","learn","subs","library"]; g[2] = [...want.filter(k=>g[2].includes(k)), ...g[2].filter(k=>!want.includes(k))]; } }
 
+/* ---- Workshop archive tabs: Platforms, Art forms, Art form–teacher map, then the rest (Teachers last); opens on Platforms */
+if(S.ui.wsub==="records") S.ui.wsub = "platforms";
+{ const _wv = VIEWS.workshops; VIEWS.workshops = function(){ const h = _wv();
+  const order = ["platforms","artforms","map","records","review","recon","about","teachers"];
+  return h.replace(/<div class="chips">((?:<button class="chip" data-wsub="[^"]+"[^>]*>[\s\S]*?<\/button>)+)<\/div>/, (all, inner) => {
+    const btns = inner.match(/<button class="chip" data-wsub="[^"]+"[^>]*>[\s\S]*?<\/button>/g) || [];
+    const key = b => (b.match(/data-wsub="([^"]+)"/)||[])[1];
+    btns.sort((a,b)=>{ const ia = order.indexOf(key(a)), ib = order.indexOf(key(b)); return (ia<0?99:ia)-(ib<0?99:ib); });
+    return `<div class="chips">${btns.join("")}</div>`; }); }; }
+
 window.__studio={get S(){return S;},toast,savePainting,ACTS,downloadJournal,retryFailed};
 boot();
 })();
