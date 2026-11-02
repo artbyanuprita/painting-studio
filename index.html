@@ -4055,8 +4055,11 @@ boot();
   function open(scheme, pkg, path){
     location.href = android ? 'intent://'+(path||'')+'#Intent;scheme='+scheme+';package='+pkg+';end' : scheme+'://'+(path||'');
   }
-  window.rkOpen = function(path){ open('rangkosh','com.artbyanuprita.rangkosh',path); };
-  window.abaOpen = function(path){ open('artbyanuprita','com.artbyanuprita.app',path); };
+  // On the laptop there are no installed apps: open the private web versions instead
+  var ABA_WEB = 'https://anu-studio-notes.pages.dev/', RK_WEB = 'https://anu-colour-notes.pages.dev/index.html';
+  function note(t){ var el=document.createElement('div'); el.textContent=t; el.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2A2018;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:99999'; document.body.appendChild(el); setTimeout(function(){ el.remove(); },3000); }
+  window.rkOpen = function(path){ if(!android){ window.open(RK_WEB + (path ? '#/' + path : ''), 'anuprita-rangkosh'); return; } open('rangkosh','com.artbyanuprita.rangkosh',path); };
+  window.abaOpen = function(path){ if(!android){ window.open(ABA_WEB, 'anuprita-art'); return; } open('artbyanuprita','com.artbyanuprita.app',path); };
   window.rkButton = function(r){ var m=rkMatch(r);
     return m ? '<button type="button" class="rkbtn" onclick="rkOpen(\''+m.path+'\')">Open '+e(m.label)+' in Rang Kosh ›</button>'
              : '<div class="rkmiss">Not matched to a Rang Kosh page yet. Add its usual name (Geru, Neel, Hingula…) under Other names.</div>'; };
@@ -4068,8 +4071,8 @@ boot();
       + '<a href="#" data-app="rk"><i style="background:#C8892B"></i>Rang Kosh</a>';
     el.onclick = function(ev){ var a=ev.target.closest('a'); if(!a) return; ev.preventDefault();
       if(a.dataset.app==='aba') abaOpen(''); else if(a.dataset.app==='rk') rkOpen(''); };
-    if(!android) el.title = 'The app links work on your phone and tablet.';
   }
+  if(!android){ try{ window.name = 'anuprita-studio'; }catch(e){} }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', switcher); else switcher();
 })();
 </script>
