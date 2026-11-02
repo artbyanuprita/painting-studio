@@ -37,7 +37,7 @@ window.__auth = (function(){
       g.innerHTML = '<div style="max-width:380px;width:100%;text-align:center;font-family:Hind,system-ui,sans-serif;color:var(--ink,#2a211b)">' +
         '<img src="icon-192.png" alt="" width="84" height="84" style="display:block;margin:0 auto 14px">' +
         '<h1 style="font-family:Martel,Georgia,serif;font-size:24px;margin:0 0 6px">Indian Painting Studio</h1>' +
-        '<p style="margin:0 0 18px;opacity:.75">Sign in with your studio Google account<br>(anupritasingh or anupritakhare)</p>' +
+        '<p style="margin:0 0 18px;opacity:.75">Sign in with your studio Google account</p>' +
         '<div id="signin-btn" style="display:flex;justify-content:center;min-height:44px"></div>' +
         '<p id="signin-msg" style="margin:14px 0 0;font-size:14px;color:#9a2b12"></p></div>';
       (document.body || document.documentElement).appendChild(g);
@@ -71,7 +71,7 @@ window.__auth = (function(){
     token: function(){ if(valid()) return Promise.resolve(tok); return new Promise(function(res){ waiters.push(res); ask(lastMsg); }); },
     reset: function(err){
       tok = null; exp = 0; try{ localStorage.removeItem(KEY); }catch(e){}
-      if(/^not_allowed:/.test(err || "")){ lastMsg = "“" + String(err).split(": ")[1] + "” isn't one of the studio accounts. Choose anupritasingh or anupritakhare."; try{ google.accounts.id.disableAutoSelect(); }catch(e){} }
+      if(/^not_allowed:/.test(err || "")){ lastMsg = "“" + String(err).split(": ")[1] + "” isn't one of the studio accounts. Choose your studio account."; try{ google.accounts.id.disableAutoSelect(); }catch(e){} }
       else lastMsg = "";
     },
     email: function(){ return email; },
@@ -532,6 +532,7 @@ details.filters[open]>summary{background:var(--surface-2)}
     <button class="savestate" id="savestate" data-s="saved" type="button"><i></i><span>Connecting…</span></button>
   </div>
   <div class="period" id="periodband"></div>
+  <div id="appswitch"></div>
 </div>
 <nav class="tabs" aria-label="Sections"><div class="wrap" id="tabs"></div></nav>
 <main class="wrap" id="view"><div class="empty">Loading your studio…</div></main>
@@ -1349,7 +1350,7 @@ WS.materials = p => { const pigs = p.pigmentIds.map(id=>S.pigments.get(id)).filt
     <div class="row">${sel('data-pick-surface style="max-width:420px"', [["","— Choose from your surface records —"],...[...S.surfaces.values()].sort((a,c)=>norm(a.name).localeCompare(norm(c.name))).map(r=>[r.id,r.name])], p.surfaceId)}${surf?`<button class="btn sm" data-act="rec-edit" data-kind="surfaces" data-id="${attr(surf.id)}">View</button>`:""}</div>
     ${surf?`<div class="small ink2">${esc([surf.surfaceType,surf.base,surf.tradition].filter(Boolean).join(" · "))}</div>`:`<div class="small muted">${S.surfaces.size?"":"Your surface records live in Library › Surfaces."}</div>`}</div>
   <div class="card stack-s"><div class="row between"><h3>Pigments</h3><button class="btn sm ghost" data-act="rec-new" data-kind="pigments" data-for="${attr(p.id)}">${ICON.plus} New pigment</button></div>
-    ${pigs.length?`<div class="row">${pigs.map(r=>`<span class="pigchip"><span class="sw" style="background:${/^#[0-9a-f]{6}$/i.test(r.colour||"")?r.colour:"transparent"}"></span><button class="bt" data-act="rec-edit" data-kind="pigments" data-id="${attr(r.id)}">${esc(r.name)}</button><button class="icon-btn" style="width:28px;height:28px" data-unpick-pig="${attr(r.id)}" aria-label="Remove ${attr(r.name)}">${ICON.x}</button></span>`).join("")}</div>`:`<div class="small muted">No pigments chosen yet.</div>`}
+    ${pigs.length?`<div class="row">${pigs.map(r=>`<span class="pigchip"><span class="sw" style="background:${/^#[0-9a-f]{6}$/i.test(r.colour||"")?r.colour:"transparent"}"></span><button class="bt" data-act="rec-edit" data-kind="pigments" data-id="${attr(r.id)}">${esc(r.name)}</button>${window.rkChip?rkChip(r):""}<button class="icon-btn" style="width:28px;height:28px" data-unpick-pig="${attr(r.id)}" aria-label="Remove ${attr(r.name)}">${ICON.x}</button></span>`).join("")}</div>`:`<div class="small muted">No pigments chosen yet.</div>`}
     ${avail.length?`<div>${sel('data-pick-pig style="max-width:420px"', [["","+ Add a pigment from your library"],...avail.map(r=>[r.id,r.name])], "")}</div>`:S.pigments.size?"":`<div class="small muted">Your pigment library lives in Library › Pigments.</div>`}</div>
   <div class="fgrid r1">
   ${pf(p,"surface","Surface notes").replace('class="f"','class="f full"')}
@@ -1745,7 +1746,7 @@ VIEWS.settings = function(){
     ${missing?`<div class="row"><button class="btn" data-act="import-missing">Import ${missing} missing source paintings</button><span class="small muted">Adds only IDs not already present; never overwrites.</span></div>`:`<div class="small muted">All ${(S.ref.seed||[]).length} source paintings are present.</div>`}</div></section>
   <section class="panel"><div class="hd"><h2>Import report</h2></div><div class="bd">${R?importReport(R):"Loading…"}</div></section>
   <section class="panel"><div class="hd"><h2>Using it on Android</h2></div><div class="bd small stack-s">
-    <div>Open artbyanuprita.github.io/painting-studio in Chrome, sign in with anupritasingh or anupritakhare, then use the menu ⋮ › Add to Home screen. The icon opens the studio like an app.</div>
+    <div>Open artbyanuprita.github.io/painting-studio in Chrome, sign in with your studio account, then use the menu ⋮ › Add to Home screen. The icon opens the studio like an app.</div>
     <div><b>Works offline:</b> nothing. Your records live in the studio database and need a connection. <b>Saving:</b> every edit saves automatically; the dot under the title shows Saving, Saved, or a red retry message.</div></div></section></div>`;
 };
 function importReport(R){
@@ -2043,7 +2044,7 @@ function sheetRecord(kind, rec, forPid){
     if(type==="select") return `<label class="f"><span>${esc(label)}</span>${sel(`id="rc-${k}"`, opt.map(x=>[x,x||"—"]), v)}</label>`;
     if(type==="color") return `<label class="f"><span>${esc(label)}</span><span class="row" style="flex-wrap:nowrap"><input type="color" id="rc-${k}" value="${attr(/^#[0-9a-f]{6}$/i.test(v)?v:"#c2381f")}" style="width:56px;height:40px;border:0;background:none;padding:0"><label class="row small"><input type="checkbox" id="rc-${k}-none" ${v?"":"checked"}> No swatch</label></span></label>`;
     return `<label class="f${k==="name"?" full":""}"><span>${esc(label)}</span><input class="in" id="rc-${k}" value="${attr(v)}" ${o.ph?`placeholder="${attr(o.ph)}"`:""} ${k==="name"&&!rec?"autofocus":""}></label>`; };
-  openSheet(rec ? e.name : `New ${K.title.toLowerCase()}`, `<div class="fgrid">${K.fields.map(field).join("")}</div>
+  openSheet(rec ? e.name : `New ${K.title.toLowerCase()}`, `${kind==="pigments"&&rec&&window.rkButton?rkButton(rec):""}<div class="fgrid">${K.fields.map(field).join("")}</div>
     ${used.length?`<div class="stack-s"><div class="cap">Used in</div>${used.map(p=>`<a href="#" class="small" data-act="open-ws" data-id="${attr(p.id)}">${esc(p.id)} · ${esc(p.title)}</a>`).join("")}</div>`:""}
     <div class="row"><button class="btn primary" data-sh="save">Save</button><button class="btn" data-sh="close">Cancel</button>${rec?confirmBtn("Delete"):""}</div>`,
   { save: () => { const name = v("rc-name"); if(!name){ toast("Give it a name."); return; }
@@ -4080,31 +4081,67 @@ function uvSheet(preId){
 { const _rv = VIEWS.recs; VIEWS.recs = function(){ const h = _rv(); return h.replace(/(<h2[^>]*>[\s\S]*?<\/h2>)/, `$1<div class="row" style="margin:4px 0"><button class="btn sm primary" data-uv-add="">＋ Add class videos</button></div>`); }; }
 document.addEventListener("click", e => { const el = e.target.closest && e.target.closest("[data-uv-add]"); if(!el) return; e.preventDefault(); e.stopPropagation(); uvSheet(el.dataset.uvAdd || ""); }, true);
 
-/* ---- links to her other two art apps (Rang Kosh, Art by Anuprita); addresses are kept in her private settings, not in the page */
-const MYAPPS = [["rangkosh","Rang Kosh"],["aba","Art by Anuprita"]];
-function appLink(k){ return ((S.settings && S.settings.appLinks) || {})[k] || ""; }
-{ const _dt = drawTabs; drawTabs = function(){ _dt(); const tabs = document.getElementById("tabs"); if(!tabs || tabs.querySelector(".appswitch")) return;
-  const pill = (k, l, dot, on) => `<button class="apill${on?" on":""}" type="button" ${on?'aria-current="page"':`data-myapp="${k}" title="Open ${l}"`}><span class="adot" style="background:${dot}"></span>${l}</button>`;
-  tabs.insertAdjacentHTML("afterbegin", `<div class="appswitch">${pill("studio","Studio","#5E7A43",true)}${pill("aba","Art by Anuprita","#A8432C",false)}${pill("rangkosh","Rang Kosh","#C8902F",false)}</div>`); }; }
-function appSheet(k){ const l = (MYAPPS.find(x=>x[0]===k)||[])[1]||k;
-  openSheet(`${l}: link`, `<div class="stack-s"><div class="small muted">Paste the address you use to open ${esc(l)}, for example its Cloudflare Pages address (https://….pages.dev). It is saved in your private studio settings, so the button opens it from then on, on every device.</div>
-    <label class="f"><span>Address</span><input class="in" id="app-url" type="url" placeholder="https://" value="${attr(appLink(k))}" autofocus></label>
-    <div class="row"><button class="btn primary" data-sh="save">Save</button>${appLink(k)?`<button class="btn" data-sh="open">Open now</button>`:""}<button class="btn ghost" data-sh="close">Cancel</button></div></div>`,
-  { save: () => { const u = v("app-url"); if(u && !/^https?:\/\//i.test(u)){ toast("The address should start with https://"); return; }
-      S.settings.appLinks = {...(S.settings.appLinks||{}), [k]: u}; saveSettings(); closeOverlay(true); toast(u ? `${l} link saved.` : `${l} link removed.`); },
-    open: () => { closeOverlay(true); window.open(appLink(k), "_blank", "noopener"); } }); }
-document.addEventListener("click", e => { const el = e.target.closest && e.target.closest("[data-myapp]"); if(!el) return; e.preventDefault(); e.stopPropagation();
-  const k = el.dataset.myapp; const u = appLink(k);
-  if(u && !e.altKey){ const w = window.open(u, "_blank", "noopener"); if(!w) location.href = u; } else appSheet(k); }, true);
-{ const st = document.createElement("style"); st.textContent = `.appswitch{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:2px 0 10px}.apill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-strong,#ddd);background:var(--surface,#fbf8f3);color:var(--ink,#2B2622);border-radius:999px;padding:7px 16px;font:600 .92rem/1.2 inherit;cursor:pointer}.apill.on{background:#2B2622;color:#FBF8F3;border-color:#2B2622;cursor:default}.adot{width:10px;height:10px;border-radius:50%;flex:none}`; document.head.appendChild(st); }
-{ const _sv = VIEWS.settings; VIEWS.settings = function(){ const h = _sv();
-  const box = `<section class="panel"><div class="hd"><h2>My other apps</h2></div><div class="bd stack-s"><div class="small muted">The Art by Anuprita and Rang Kosh buttons at the top of every page open these. Tap one to set or change its address.</div><div class="row">${MYAPPS.map(([k,l])=>`<button class="btn sm" data-myapp-set="${k}">${esc(l)}: ${appLink(k)?"change link":"add link"}</button>`).join("")}</div></div></section>`;
-  return h.replace('<div class="stack">', '<div class="stack">' + box); }; }
-document.addEventListener("click", e => { const el = e.target.closest && e.target.closest("[data-myapp-set]"); if(!el) return; e.preventDefault(); appSheet(el.dataset.myappSet); });
 
 window.__studio={get S(){return S;},toast,savePainting,ACTS,downloadJournal,retryFailed};
 boot();
 })();
 
+</script>
+<style>
+#appswitch{display:flex;gap:6px;margin:8px 0 2px;flex-wrap:wrap}
+#appswitch a{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:.8rem;font-weight:600;text-decoration:none;border:1px solid rgba(0,0,0,.12);color:inherit;background:rgba(255,255,255,.55)}
+#appswitch a.on{background:#2A2018;color:#F4EBD6;border-color:#2A2018}
+#appswitch i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.rkbtn{display:flex;align-items:center;gap:8px;width:100%;justify-content:center;margin:0 0 12px;padding:10px 14px;border-radius:12px;border:0;background:#A23A28;color:#F4EBD6;font:600 .9rem inherit;cursor:pointer}
+.rkmiss{font-size:.8rem;opacity:.7;margin:0 0 10px}
+.rkchip{border:0;background:none;color:#A23A28;font-weight:700;font-size:.78rem;padding:0 4px;cursor:pointer}
+</style>
+<script id="three-apps">
+/* Links between the three apps: Studio Tracker (this page), Art by Anuprita and Rang Kosh. */
+(function(){
+  var RKI = {"jars": [["PG-014", "Burnt sienna", ["PG-014"], "red-ochres"], ["PG-049", "Pompeii red, burnt natural sienna", ["PG-049"], "red-ochres"], ["PG-109", "Pozzuoli red", ["PG-109"], "red-ochres"], ["PG-057", "Red ocher", ["PG-057"], "red-ochres"], ["PG-015", "Venetian red, from Italy", ["PG-015", "PG-055", "PG-113"], "red-ochres"], ["PG-064", "Cinnabar", ["PG-064"], "cinnabar-and-vermilion"], ["PG-069", "Cinnabar \"chien t'ou\"", ["PG-069"], "cinnabar-and-vermilion"], ["PG-005", "Natural cinnabar", ["PG-005"], "cinnabar-and-vermilion"], ["PG-078", "Red", ["PG-078"], "cinnabar-and-vermilion"], ["PG-038", "Vermilion, genuine", ["PG-038"], "cinnabar-and-vermilion"], ["PG-034", "Alizarin crimson, dark", ["PG-034"], "madder-and-alizarin"], ["PG-011", "Madder lake from roots", ["PG-011"], "madder-and-alizarin"], ["PG-077", "Pink", ["PG-077"], "plant-reds-and-pinks"], ["PG-082", "Red", ["PG-082"], "plant-reds-and-pinks"], ["PG-060", "Medium red crimson", ["PG-060"], "earth-pigments-composite-colours"], ["PG-063", "Primary red cinnabar", ["PG-063"], "earth-pigments-composite-colours"], ["PG-008", "Ruby DPP TR, PR 264", ["PG-008"], "modern-organic-pigments"], ["PG-067", "Realgar", ["PG-067"], "realgar"], ["PG-007", "Orange DPP RA, PO 73", ["PG-007"], "modern-organic-pigments"], ["PG-029", "Amberg yellow, deep, German", ["PG-029"], "yellow-ochres"], ["PG-058", "Dark yellow ocher", ["PG-058"], "yellow-ochres"], ["PG-092", "French ochre, very light", ["PG-092"], "yellow-ochres"], ["PG-039", "Gold ochre light, Sienna de Verona", ["PG-039"], "yellow-ochres"], ["PG-012", "Gold ochre, Italian", ["PG-012", "PG-114"], "yellow-ochres"], ["PG-104", "Lemon ochre", ["PG-104"], "yellow-ochres"], ["PG-013", "Raw sienna, Italian", ["PG-013", "PG-050"], "yellow-ochres"], ["PG-036", "Fawn ochre, German", ["PG-036"], "umbers-and-brown-earths"], ["PG-066", "Orpiment", ["PG-066"], "orpiment"], ["PG-071", "Yellow", ["PG-071"], "turmeric-and-plant-yellows"], ["PG-019", "Bristol yellows — pale, medium, reddish", ["PG-019", "PG-020", "PG-021"], "bristol-yellows"], ["PG-062", "Medium yellow sun", ["PG-062"], "earth-pigments-composite-colours"], ["PG-112", "Yellow iron oxide", ["PG-112"], "synthetic-iron-oxides"], ["PG-033", "Praseodymium yellow", ["PG-033"], "praseodymium-yellow"], ["PG-018", "Bohemian green earth", ["PG-018", "PG-051"], "green-earth"], ["dioptase", "Dioptase", [], "dioptase"], ["PG-068", "Malachite", ["PG-068", "PG-106"], "malachite"], ["PG-003", "Malachite natural", ["PG-003", "PG-031"], "malachite"], ["PG-076", "Green", ["PG-076"], "leaf-greens-and-layered-greens"], ["PG-022", "Cobalt green PG 50", ["PG-022", "PG-054"], "cobalt-blues-cerulean-and-cobalt-greens"], ["PG-023", "Cobalt green bluish A", ["PG-023", "PG-037"], "cobalt-blues-cerulean-and-cobalt-greens"], ["PG-061", "Medium green parrot", ["PG-061"], "earth-pigments-composite-colours"], ["PG-105", "Viridian", ["PG-105"], "viridian-and-chromium-greens"], ["PG-065", "Azurite", ["PG-065"], "azurite"], ["PG-002", "Azurite MP", ["PG-002"], "azurite"], ["PG-107", "Fra Angelico blue", ["PG-107"], "lapis-lazuli-and-natural-ultramarine"], ["PG-004", "Lapis lazuli from Chile", ["PG-004"], "lapis-lazuli-and-natural-ultramarine"], ["PG-072", "Blue", ["PG-072"], "butterfly-pea-blue"], ["PG-075", "Blue", ["PG-075"], "indigo"], ["PG-010", "Indigo, genuine", ["PG-010"], "indigo"], ["PG-026", "Cobalt blue, dark", ["PG-026", "PG-028", "PG-108"], "cobalt-blues-cerulean-and-cobalt-greens"], ["PG-040", "Cobalt cerulean blue", ["PG-040"], "cobalt-blues-cerulean-and-cobalt-greens"], ["PG-059", "Primary blue", ["PG-059"], "earth-pigments-composite-colours"], ["PG-025", "Prussian blue LUX", ["PG-025", "PG-043"], "prussian-blue"], ["PG-032", "Smalt, standard", ["PG-032"], "smalt"], ["PG-103", "Ultramarine blue", ["PG-103"], "synthetic-ultramarine"], ["PG-024", "Ultramarine blue, dark", ["PG-024", "PG-053"], "synthetic-ultramarine"], ["PG-001", "Pinkcolor", ["PG-001"], "english-pink"], ["PG-009", "Quinacridone pink D", ["PG-009"], "modern-organic-pigments"], ["PG-042", "Ultramarine red, violet pink", ["PG-042"], "ultramarine-violet-and-pink"], ["PG-052", "Caput mortuum violet, haematite", ["PG-052"], "red-ochres"], ["PG-030", "Brown ochre, light, German", ["PG-030"], "yellow-ochres"], ["brown-ocher", "Brown ocher", [], "umbers-and-brown-earths"], ["PG-046", "Burnt umber, dark brown, from Cyprus", ["PG-046"], "umbers-and-brown-earths"], ["PG-017", "Burnt umber, reddish", ["PG-017"], "umbers-and-brown-earths"], ["PG-016", "Raw umber, Italian", ["PG-016"], "umbers-and-brown-earths"], ["PG-041", "Raw umber, from Cyprus", ["PG-041"], "umbers-and-brown-earths"], ["PG-048", "Raw umber, greenish, German", ["PG-048"], "umbers-and-brown-earths"], ["PG-111", "Brown iron oxide", ["PG-111"], "synthetic-iron-oxides"], ["PG-056", "Caput mortuum synthetic, bluish", ["PG-056"], "synthetic-iron-oxides"], ["PG-044", "Bone black", ["PG-044"], "bone-black"], ["PG-047", "Vine black, German", ["PG-047"], "charcoal-and-vine-black"], ["PG-006", "Peach black", ["PG-006"], "kernel-blacks"], ["PG-073", "Black from kajal", ["PG-073"], "lamp-black"], ["PG-110", "Black iron oxide", ["PG-110"], "synthetic-iron-oxides"], ["PG-035", "Iron oxide black / Mars black 318", ["PG-035"], "synthetic-iron-oxides"], ["PG-079", "White clay", ["PG-079"], "chalk-and-kaolin-whites"], ["PG-080", "White from khadiya", ["PG-080"], "chalk-and-kaolin-whites"], ["PG-027", "Zinc white, lead-free", ["PG-027", "PG-045"], "zinc-white"], ["PG-074", "Black", ["PG-074"], "memeraki-natural-colours"], ["PG-081", "Green", ["PG-081"], "memeraki-natural-colours"], ["PG-070", "Yellow", ["PG-070"], "memeraki-natural-colours"], ["PG-083", "Unlabelled powder 1 — yellow earth (PG-083)", ["PG-083"], "unlabelled-jars"], ["PG-093", "Unlabelled powder 11 — pale yellow (PG-093)", ["PG-093"], "unlabelled-jars"], ["PG-094", "Unlabelled powder 12 — white (PG-094)", ["PG-094"], "unlabelled-jars"], ["PG-084", "Unlabelled powder 2 — off-white chunks (PG-084)", ["PG-084"], "unlabelled-jars"], ["PG-085", "Unlabelled powder 3 — yellow ochre (PG-085)", ["PG-085"], "unlabelled-jars"], ["PG-086", "Unlabelled powder 4 — red earth (PG-086)", ["PG-086"], "unlabelled-jars"], ["PG-087", "Unlabelled powder 5 — blue (PG-087)", ["PG-087"], "unlabelled-jars"], ["PG-088", "Unlabelled powder 6 — charcoal grey (PG-088)", ["PG-088"], "unlabelled-jars"], ["PG-089", "Unlabelled powder 7 — red earth (PG-089)", ["PG-089"], "unlabelled-jars"], ["PG-090", "Unlabelled powder 8 — deep red (PG-090)", ["PG-090"], "unlabelled-jars"], ["PG-091", "Unlabelled powder 9 — grey (PG-091)", ["PG-091"], "unlabelled-jars"], ["PG-095", "Unlabelled small jar 1 — red (PG-095)", ["PG-095"], "unlabelled-jars"], ["PG-096", "Unlabelled small jar 2 — ochre (PG-096)", ["PG-096"], "unlabelled-jars"], ["PG-097", "Unlabelled small jar 3 — bright yellow (PG-097)", ["PG-097"], "unlabelled-jars"], ["PG-098", "Unlabelled small jar 4 — blue (PG-098)", ["PG-098"], "unlabelled-jars"], ["PG-099", "Unlabelled small jar 5 — bright red (PG-099)", ["PG-099"], "unlabelled-jars"], ["PG-100", "Unlabelled small jar 6 — yellow (PG-100)", ["PG-100"], "unlabelled-jars"], ["PG-101", "Unlabelled small jar 7 — red-orange (PG-101)", ["PG-101"], "unlabelled-jars"], ["PG-102", "Unlabelled small jar 8 — red (PG-102)", ["PG-102"], "unlabelled-jars"]], "profs": [["cinnabar-and-vermilion", "Cinnabar and vermilion (Hingula)", ["Cinnabar and vermilion", "Hingula"]], ["red-ochres", "Red ochres (Geru)", ["Red ochres", "Geru"]], ["madder-and-alizarin", "Madder and alizarin (Manjishtha)", ["Madder and alizarin", "Manjishtha"]], ["earth-pigments-composite-colours", "Earth Pigments composite colours", ["Earth Pigments composite colours"]], ["plant-reds-and-pinks", "Plant reds and pinks (beetroot, flowers)", ["Plant reds and pinks", "beetroot", "flowers"]], ["modern-organic-pigments", "Modern organic pigments (DPP, quinacridone)", ["Modern organic pigments", "DPP", "quinacridone"]], ["realgar", "Realgar (Manahshila)", ["Realgar", "Manahshila"]], ["yellow-ochres", "Yellow ochres (Ramraj)", ["Yellow ochres", "Ramraj"]], ["orpiment", "Orpiment (Haritala)", ["Orpiment", "Haritala"]], ["turmeric-and-plant-yellows", "Turmeric and plant yellows (Haldi)", ["Turmeric and plant yellows", "Haldi"]], ["bristol-yellows", "Bristol yellows (Naples-yellow imitations)", ["Bristol yellows", "Naples-yellow imitations"]], ["praseodymium-yellow", "Praseodymium yellow", ["Praseodymium yellow"]], ["cobalt-blues-cerulean-and-cobalt-greens", "Cobalt blues, cerulean and cobalt greens", ["Cobalt blues, cerulean and cobalt greens"]], ["leaf-greens-and-layered-greens", "Leaf greens and layered greens", ["Leaf greens and layered greens"]], ["malachite", "Malachite", ["Malachite"]], ["green-earth", "Green earth (terre verte)", ["Green earth", "terre verte"]], ["dioptase", "Dioptase", ["Dioptase"]], ["viridian-and-chromium-greens", "Viridian and chromium greens", ["Viridian and chromium greens"]], ["lapis-lazuli-and-natural-ultramarine", "Lapis lazuli and natural ultramarine (Lajward)", ["Lapis lazuli and natural ultramarine", "Lajward"]], ["indigo", "Indigo (Neel)", ["Indigo", "Neel"]], ["azurite", "Azurite", ["Azurite"]], ["synthetic-ultramarine", "Synthetic ultramarine", ["Synthetic ultramarine"]], ["prussian-blue", "Prussian blue", ["Prussian blue"]], ["butterfly-pea-blue", "Butterfly-pea blue (Aparajita)", ["Butterfly-pea blue", "Aparajita"]], ["smalt", "Smalt", ["Smalt"]], ["english-pink", "English pink (chrome-tin pink)", ["English pink", "chrome-tin pink"]], ["ultramarine-violet-and-pink", "Ultramarine violet and pink", ["Ultramarine violet and pink"]], ["umbers-and-brown-earths", "Umbers and brown earths", ["Umbers and brown earths"]], ["synthetic-iron-oxides", "Synthetic iron oxides (Mars colours)", ["Synthetic iron oxides", "Mars colours"]], ["lamp-black", "Lamp black (Kajal)", ["Lamp black", "Kajal"]], ["charcoal-and-vine-black", "Charcoal and vine black", ["Charcoal and vine black"]], ["kernel-blacks", "Kernel blacks (coconut shell, peach stone)", ["Kernel blacks", "coconut shell", "peach stone"]], ["bone-black", "Bone black", ["Bone black"]], ["chalk-and-kaolin-whites", "Chalk and kaolin whites (Khariya)", ["Chalk and kaolin whites", "Khariya"]], ["zinc-white", "Zinc white", ["Zinc white"]], ["unlabelled-jars", "Unlabelled jars", ["Unlabelled jars"]], ["memeraki-natural-colours", "MeMeraki natural colours (contents not confirmed)", ["MeMeraki natural colours", "contents not confirmed"]]]};
+  var ALIAS = [["\\b(geru|red ochre|red oxide|haematite|hematite)\\b", "red-ochres"], ["\\b(hingula|hingul|cinnabar|vermilion)\\b", "cinnabar-and-vermilion"], ["\\b(haritala|harital|orpiment)\\b", "orpiment"], ["\\b(manahshila|realgar)\\b", "realgar"], ["\\b(ramraj|yellow ochre|yellow-ochre|peeli mitti)\\b", "yellow-ochres"], ["\\b(khariya|khadia|chalk|kaolin)\\b", "chalk-and-kaolin-whites"], ["\\b(kajal|lampblack|lamp black|lamp-black|soot)\\b", "lamp-black"], ["\\b(neel|indigo)\\b", "indigo"], ["\\b(lajward|lapis)\\b", "lapis-lazuli-and-natural-ultramarine"], ["\\b(manjishtha|madder|alizarin)\\b", "madder-and-alizarin"], ["\\b(haldi|turmeric)\\b", "turmeric-and-plant-yellows"], ["\\b(aparajita|butterfly[- ]pea)\\b", "butterfly-pea-blue"], ["\\bmalachite\\b", "malachite"], ["\\bazurite\\b", "azurite"], ["\\b(terre verte|green earth)\\b", "green-earth"], ["\\bleaf[- ]green\\b", "leaf-greens-and-layered-greens"], ["\\b(umber|sienna)\\b", "umbers-and-brown-earths"], ["\\bcharcoal\\b", "charcoal-and-vine-black"], ["\\bzinc white\\b", "zinc-white"], ["\\bprussian blue\\b", "prussian-blue"]].map(function(a){ return [new RegExp(a[0],'i'), a[1]]; });
+  var android = /Android/i.test(navigator.userAgent);
+  var n = function(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,''); };
+  var e = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
+  var words = [];
+  RKI.profs.forEach(function(p){ p[2].forEach(function(nm){ nm.split(/ and |,/).forEach(function(w){ w=w.trim().toLowerCase().replace(/s$/,''); if(w.length>=4 && !/^(modern|synthetic|natural|plant|earth|colour|pigment|composite|unlabelled|jar)/.test(w)) words.push([w,p[0]]); }); }); });
+  function title(id){ var p=RKI.profs.find(function(x){return x[0]===id;}); return p ? p[1].replace(/\s*\(.*\)$/,'') : id; }
+  window.rkMatch = function(r){
+    if(!r) return null;
+    var codes = [r.invId, r.code].filter(Boolean).map(n);
+    var j = RKI.jars.find(function(x){ return x[2].concat([x[0]]).some(function(c){ c=n(c); return codes.some(function(k){ return k===c || (c.length>=4 && (k.slice(-c.length)===c || c.slice(-k.length)===k && k.length>=4)); }); }); });
+    if(!j) j = RKI.jars.find(function(x){ return n(x[1]) && n(x[1])===n(r.name); });
+    if(j) return { path:'jar/'+encodeURIComponent(j[0]), label:j[1] };
+    var text = [r.name, r.altNames].join(' ');
+    var a = ALIAS.find(function(x){ return x[0].test(text); });
+    if(a) return { path:'profile/'+a[1], label:title(a[1]) };
+    var low = ' '+text.toLowerCase().replace(/[^a-z ]/g,' ')+' ';
+    var w = words.find(function(x){ return low.indexOf(' '+x[0])>=0; });
+    return w ? { path:'profile/'+w[1], label:title(w[1]) } : null;
+  };
+  function open(scheme, pkg, path){
+    location.href = android ? 'intent://'+(path||'')+'#Intent;scheme='+scheme+';package='+pkg+';end' : scheme+'://'+(path||'');
+  }
+  // On the laptop there are no installed apps: open the private web versions instead
+  var ABA_WEB = 'https://anu-studio-notes.pages.dev/', RK_WEB = 'https://anu-colour-notes.pages.dev/index.html';
+  function note(t){ var el=document.createElement('div'); el.textContent=t; el.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2A2018;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:99999'; document.body.appendChild(el); setTimeout(function(){ el.remove(); },3000); }
+  window.rkOpen = function(path){ if(!android){ window.open(RK_WEB + (path ? '#/' + path : ''), 'anuprita-rangkosh'); return; } open('rangkosh','com.artbyanuprita.rangkosh',path); };
+  window.abaOpen = function(path){ if(!android){ window.open(ABA_WEB, 'anuprita-art'); return; } open('artbyanuprita','com.artbyanuprita.app',path); };
+  window.rkButton = function(r){ var m=rkMatch(r);
+    return m ? '<button type="button" class="rkbtn" onclick="rkOpen(\''+m.path+'\')">Open '+e(m.label)+' in Rang Kosh ›</button>'
+             : '<div class="rkmiss">Not matched to a Rang Kosh page yet. Add its usual name (Geru, Neel, Hingula…) under Other names.</div>'; };
+  window.rkChip = function(r){ var m=rkMatch(r); return m ? '<button type="button" class="rkchip" title="Open in Rang Kosh" onclick="event.stopPropagation();rkOpen(\''+m.path+'\')">RK ›</button>' : ''; };
+  function switcher(){
+    var el=document.getElementById('appswitch'); if(!el) return;
+    el.innerHTML = '<a class="on" href="#"><i style="background:#5B7444"></i>Studio</a>'
+      + '<a href="#" data-app="aba"><i style="background:#A23A28"></i>Art by Anuprita</a>'
+      + '<a href="#" data-app="rk"><i style="background:#C8892B"></i>Rang Kosh</a>';
+    el.onclick = function(ev){ var a=ev.target.closest('a'); if(!a) return; ev.preventDefault();
+      if(a.dataset.app==='aba') abaOpen(''); else if(a.dataset.app==='rk') rkOpen(''); };
+  }
+  if(!android){ try{ window.name = 'anuprita-studio'; }catch(e){} }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', switcher); else switcher();
+})();
 </script>
 </html>
