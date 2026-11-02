@@ -4090,7 +4090,63 @@ function uvSheet(preId){
 document.addEventListener("click", e => { const el = e.target.closest && e.target.closest("[data-uv-add]"); if(!el) return; e.preventDefault(); e.stopPropagation(); uvSheet(el.dataset.uvAdd || ""); }, true);
 
 
-window.__studio={get S(){return S;},toast,savePainting,ACTS,downloadJournal,retryFailed};
+/* ---- Teacher name on each workshop: add or change it, optionally for all similar workshops with no teacher.
+   Saved as the workshop's correction (meta "workshop".review.fix.teacher), the same place Needs review uses, so the
+   Teachers pages, filters and art-form maps all pick it up. */
+function wtSimilar(w){ const e = wsEff(w); const a = alNorm(e.art), p = alNorm(e.platform || w["Platform / Provider"] || "");
+  return IX.wsList.filter(x => x.id!==w.id && !wsEff(x).teacher && alNorm(wsEff(x).art)===a && alNorm(wsEff(x).platform || x["Platform / Provider"] || "")===p); }
+function wtSave(ids, name){
+  for(const id of ids){ const w = IX.wsById.get(id); if(!w) continue; const old = getMeta("workshop", id).review || {};
+    const fix = {...(old.fix||{})}; const orig = w["Teacher (reconciled)"] || w["Teacher / Instructor"] || "";
+    if(name && name!==orig) fix.teacher = name; else delete fix.teacher;
+    saveMeta("workshop", id, {review:{...old, status:Object.keys(fix).length ? "fixed" : (old.status||"confirmed"), at:nowISO(), fix}}); }
+  teacherIndex.cache = null; }
+function wtSheet(id){
+  const w = IX.wsById.get(id); if(!w) return; const e = wsEff(w); const sim = wtSimilar(w);
+  const names = [...new Set(IX.wsList.map(x=>wsEff(x).teacher).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  openSheet(e.teacher ? "Change teacher" : "Add teacher", `<div class="stack-s">
+    <div class="small muted">${esc(e.title)} · ${esc([e.art, e.platform].filter(Boolean).join(" · "))}</div>
+    <label class="f"><span>Teacher's name</span><input class="in" id="wt-name" list="wt-list" value="${attr(e.teacher)}" placeholder="For example, Saju ji" autofocus>
+      <datalist id="wt-list">${names.map(n=>`<option value="${attr(n)}">`).join("")}</datalist></label>
+    ${sim.length ? `<label class="row" style="gap:8px;align-items:flex-start"><input type="checkbox" id="wt-all"><span class="small">Also add this teacher to the other <b>${sim.length}</b> ${esc(e.art||"")} workshop${sim.length>1?"s":""} on ${esc(e.platform||"this platform")} that have no teacher yet</span></label>` : ""}
+    <div class="row"><button class="btn primary" data-sh="save">Save teacher</button><button class="btn" data-sh="close">Cancel</button></div></div>`,
+  { save: () => { const name = v("wt-name").trim(); const all = document.getElementById("wt-all"); const ids = [id, ...(all && all.checked ? sim.map(x=>x.id) : [])];
+      wtSave(ids, name); logAct("learning", name ? `Teacher ${name} added to ${ids.length} workshop${ids.length>1?"s":""}` : `Teacher removed from ${e.title}`);
+      closeOverlay(true); setTimeout(()=>{ render(); sheetWorkshop(id); }, 150);
+      toast(name ? (ids.length>1 ? `${name} added to ${ids.length} workshops` : `Teacher saved: ${name}`) : "Teacher removed"); } });
+}
+{ const _sw = sheetWorkshop; sheetWorkshop = function(id){ _sw(id); const w = IX.wsById.get(id); const sh = document.querySelector("#overlay .sheet .sh"); if(!w || !sh || document.querySelector("#overlay [data-wt-edit]")) return;
+    const t = wsEff(w).teacher; const d = document.createElement("div"); d.className = "row"; d.style.cssText = "margin:0 0 8px;gap:8px;align-items:center;flex-wrap:wrap";
+    d.innerHTML = `<span class="small"><b>Teacher:</b> ${t ? esc(t) : `<span class="muted">not added yet</span>`}</span><button class="btn sm" data-wt-edit="${attr(id)}">${t ? "✎ Change teacher" : "＋ Add teacher"}</button>`;
+    const vb = document.querySelector("#overlay [data-uv-add]"); (vb ? vb.closest(".row") : sh).after(d);
+    // the record table below shows the original sheet value; show the name she added there too
+    if(t) document.querySelectorAll("#overlay dt").forEach(dt => { if(/^Teacher \/ Instructor$|^Teacher \(reconciled\)$/.test(dt.textContent.trim())){ const dd = dt.nextElementSibling; if(dd && (!dd.textContent.trim() || dd.textContent.trim()==="—")) dd.textContent = t; } }); }; }
+document.addEventListener("click", e => { const el = e.target.closest && e.target.closest("[data-wt-edit]"); if(!el) return; e.preventDefault(); e.stopPropagation(); wtSheet(el.dataset.wtEdit); }, true);
+
+/* ---- Known teachers by platform and art form (from Anuprita and the Catterfly website, 2 Nov 2026). Used only when a workshop has no teacher;
+   a name she adds or changes on a workshop always wins. */
+const WT_RULES = [   // Catterfly teachers, from catterfly.art › Art Masterclasses and from Anuprita
+  {plat:/catter ?fly/i, art:/kerala/i, teacher:"Saju MP"},
+  {plat:/catter ?fly/i, art:/patt?a ?chitra/i, teacher:"Bhaskar Mohapatra"},
+  {plat:/catter ?fly/i, art:/madhubani|mithila/i, teacher:"Hema Devi"},
+  {plat:/catter ?fly/i, art:/warli/i, teacher:"Sanjay Sangle"},
+  {plat:/catter ?fly/i, art:/kalighat|santhal/i, teacher:"Samir Chitrakar"},
+  {plat:/catter ?fly/i, art:/contemporary/i, teacher:"Vipra Karkare"},
+  {plat:/catter ?fly/i, art:/pichwai/i, teacher:"Kapil Sharma"},
+  {plat:/catter ?fly/i, art:/gond/i, teacher:"Sahdev Pusham"},
+  {plat:/catter ?fly/i, art:/kalamkari/i, teacher:"K S Sreedhar"},
+  {plat:/catter ?fly/i, art:/phad/i, teacher:"Kalyan Joshi"},
+  {plat:/catter ?fly/i, art:/thangka/i, teacher:"Krishna Tashi Palmo"},
+  {plat:/catter ?fly/i, art:/mysore/i, teacher:"J.S. Sridhar Rao"},
+];
+const WT_SAME = {"saju m n":"Saju MP", "saju mp":"Saju MP", "krishna tashi":"Krishna Tashi Palmo", "sridhar rao":"J.S. Sridhar Rao"};   // one name per teacher
+// Folk Discovery teachers by workshop, from the posters on thefolkworkshop.com (2 Nov 2026)
+const WT_BYID = {"WR0084": "Bhagwan Thakur", "WR0085": "Shalini Karn", "WR0086": "Bhagwan Thakur", "WR0087": "Bhagwan Thakur", "WR0088": "Bhagwan Thakur", "WR0089": "Shahi Subramaniyam", "WR0092": "Bhagwan Thakur", "WR0093": "Shahi Subramaniyam", "WR0096": "Bhagwan Thakur", "WR0118": "Bhagwan Thakur", "WR0122": "Bhagwan Thakur", "WR0129": "Bhagwan Thakur", "WR0141": "Bhagwan Thakur", "WR0145": "Bhagwan Thakur", "WR0148": "Bhagwan Thakur", "WR0149": "Amit Kumar Dutta", "WR0150": "Shalini Karn", "WR0154": "Shalini Karn", "WR0155": "Golu Ji", "WR0156": "Shalini Karn", "WR0157": "Shravan Paswan", "WR0158": "Bhagwan Thakur", "WR0160": "Bhagwan Thakur", "WR0161": "Bhagwan Thakur", "WR0163": "Shravan Paswan", "WR0168": "Shalini Karn", "WR0172": "Bhagwan Thakur", "WR0173": "Bhagwan Thakur", "WR0174": "Bhagwan Thakur", "WR0179": "Bhagwan Thakur", "WR0180": "Bhagwan Thakur", "WR0181": "Premlata", "WR0182": "Premlata", "WR0184": "Bhagwan Thakur", "WR0185": "Bhagwan Thakur", "WR0188": "Bhagwan Thakur", "WR0191": "Golu Ji", "WR0192": "Golu Ji", "WR0193": "Golu Ji", "WR0194": "Golu Ji", "WR0195": "Golu Ji", "WR0196": "Golu Ji", "WR0197": "Golu Ji", "WR0198": "Golu Ji", "WR0199": "Golu Ji", "WR0200": "Golu Ji", "WR0201": "Golu Ji", "WR0202": "Golu Ji", "WR0203": "Golu Ji", "WR0204": "Golu Ji", "WR0205": "Golu Ji", "WR0206": "Golu Ji", "WR0207": "Golu Ji", "WR0208": "Golu Ji", "WR0209": "Golu Ji", "WR0222": "Shubham Kumar", "WR0223": "Shubham Kumar", "WR0225": "Bhagwan Thakur", "WR0227": "Bhagwan Thakur", "WR0228": "Bhagwan Thakur", "WR0305": "Uttam Chitrakar", "WR0306": "Sonali Chitrakar", "WR0308": "Sonali Chitrakar", "WR0375": "Prasanna Naik", "WR0302": "Namrata", "WR0303": "Sujit Das", "WR0304": "Sujit Das", "WR0307": "Sonali Chitrakar", "WR0309": "Sonali Chitrakar", "WR0310": "Uttam Chitrakar", "WR0311": "Uttam Chitrakar", "WR0315": "Yashpal Baranda", "WR0316": "Gopal Saini", "WR0317": "Gopal Saini", "WR0326": "Eknath Gangavane", "WR0327": "Eknath Gangavane", "WR0328": "Eknath Gangavane", "WR0329": "Eknath Gangavane", "WR0330": "Eknath Gangavane", "WR0339": "Parikshit Sharma", "WR0343": "Dr. Janardhan Havanje", "WR0344": "Adam Imam", "WR0345": "Sonali Chitrakar", "WR0346": "Ramdev Meena", "WR0347": "Ramdev Meena", "WR0348": "Ajay Chitara", "WR0349": "Ajay Chitara", "WR0350": "Ajay Chitara", "WR0351": "Ajay Chitara", "WR0352": "Ajay Chitara", "WR0353": "Ajay Chitara", "WR0354": "Ajay Chitara", "WR0355": "Ajay Chitara", "WR0356": "Kishore Gayen", "WR0376": "Adam Christopher", "WR0377": "Adam Christopher", "WR0378": "Adam Imam", "WR0379": "Adam Imam", "WR0380": "Rajeev Pulavar", "WR0390": "Ganesh Sindhe", "WR0391": "Ganesh Sindhe", "WR0392": "Ganesh Sindhe"};
+{ const _we = wsEff; wsEff = function(w){ const e = _we(w); if(e.teacher && WT_SAME[e.teacher.trim().toLowerCase()]) e.teacher = WT_SAME[e.teacher.trim().toLowerCase()]; if(e.teacher || !w) return e; if(WT_BYID[w.id]){ e.teacher = WT_BYID[w.id]; return e; }
+    const plat = [e.platform, w["Platform / Provider"], w["Provider group"]].join(" "); const art = [e.art, w["Art Form / Tradition"]].join(" ");
+    const r = WT_RULES.find(r => r.plat.test(plat) && r.art.test(art)); if(r) e.teacher = r.teacher; return e; }; }
+
+window.__studio={get S(){return S;},get IX(){return IX;},wsEff:(w)=>wsEff(w),teacherIndex:()=>teacherIndex(),sheetWorkshop:(i)=>sheetWorkshop(i),toast,savePainting,ACTS,downloadJournal,retryFailed};
 boot();
 })();
 
