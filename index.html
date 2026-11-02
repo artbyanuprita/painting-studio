@@ -3904,17 +3904,25 @@ platWsChips = function(recs){
   S.ui.platArt = S.ui.platArt || {};
   let sel = S.ui.platArt[plat]; if(!groups.some(g=>g[0]===sel)) sel = groups[0][0];
   const g = groups.find(x=>x[0]===sel);
-  return `<section class="panel" id="platws" data-nofold><div class="hd"><h2>Workshops by art form</h2><span class="small muted num">${recs.length} · ${vids.toLocaleString()} videos</span></div><div class="bd stack-s">
+  return `<section class="panel" id="platws"><div class="hd"><h2>Workshops by art form</h2><span class="small muted num">${recs.length} · ${vids.toLocaleString()} videos</span></div><div class="bd stack-s">
     <div class="row" style="flex-wrap:wrap;gap:6px">${groups.map(([a,l,n])=>`<button class="chip" data-plat-art="${attr(a)}" data-plat-name="${attr(plat)}" aria-pressed="${a===sel}">${esc(a)} <span class="num muted">${l.length} · ${n} videos</span></button>`).join("")}</div>
     <div class="cap" style="margin-top:6px">${esc(sel)} <span class="muted num">· ${g[1].length} workshops · ${g[2]} videos</span></div>
     <div class="small muted">The number in brackets is how many class videos each workshop has. Tap a workshop to see and open them.</div>
     <div class="row" style="flex-wrap:wrap;gap:6px">${g[1].map(x=>`<button class="chip wschip${x.n?"":" none"}" data-ws-open="${attr(x.w.id)}">${esc(x.t)} <span class="num">(${x.n})</span></button>`).join("")}</div>
   </div></section>`;
 };
-{ const _pv = platformsView; platformsView = function(){ return _pv().replace('<div class="card stat"><div class="cap">Art forms</div>', '<div class="card stat click" data-plat-arts style="cursor:pointer" title="Show the art forms"><div class="cap">Art forms ›</div>'); }; }
+{ const _pv = platformsView; platformsView = function(){ let h = _pv();
+  // the four tiles open or close their section below
+  const T = [["Records","Workshops on "],["Art forms","Art forms"],["Teachers","Teachers"],["With recordings","Workshops by art form"]];
+  for(const [cap, sec] of T) h = h.replace(`<div class="card stat"><div class="cap">${cap}</div>`, `<div class="card stat click" data-plat-sec="${attr(sec)}" role="button" style="cursor:pointer" title="Show or hide"><div class="cap">${cap} ›</div>`);
+  return h.replace(/<section class="panel" data-nofold>(<div class="hd"><h2>Workshops on )/, '<section class="panel">$1'); }; }
 document.addEventListener("click", e => { const t = e.target; let el;
   if((el = t.closest("[data-plat-art]"))){ e.preventDefault(); S.ui.platArt = S.ui.platArt || {}; S.ui.platArt[el.dataset.platName] = el.dataset.platArt; render.keepScroll = true; render(); return; }
-  if(t.closest("[data-plat-arts]")){ const s = document.getElementById("platws"); if(s) s.scrollIntoView({behavior:"smooth", block:"start"}); return; }
+  if((el = t.closest("[data-plat-sec]"))){ const want = el.dataset.platSec;
+    const sec = [...document.querySelectorAll("section.panel.foldable")].find(s => { const h = s.querySelector(":scope>.hd h2"); return h && h.childNodes[0].textContent.trim().startsWith(want); });
+    if(!sec) return; const wasClosed = sec.classList.contains("collapsed"); const fb = sec.querySelector(":scope>.hd .foldbtn"); if(fb) fb.click();
+    if(wasClosed) setTimeout(()=>{ const s2 = [...document.querySelectorAll("section.panel.foldable")].find(s => { const h = s.querySelector(":scope>.hd h2"); return h && h.childNodes[0].textContent.trim().startsWith(want); }); if(s2) s2.scrollIntoView({behavior:"smooth", block:"start"}); }, 60);
+    return; }
 });
 
 /* ---- phone layout: nothing may be wider than the screen (long workshop names wrap instead of pushing the page sideways) */
