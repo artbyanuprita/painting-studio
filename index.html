@@ -4083,8 +4083,9 @@ document.addEventListener("click", e => { const el = e.target.closest && e.targe
 /* ---- links to her other two art apps (Rang Kosh, Art by Anuprita); addresses are kept in her private settings, not in the page */
 const MYAPPS = [["rangkosh","Rang Kosh"],["aba","Art by Anuprita"]];
 function appLink(k){ return ((S.settings && S.settings.appLinks) || {})[k] || ""; }
-{ const _dt = drawTabs; drawTabs = function(){ _dt(); const el = document.querySelector("#tabs .maintabs"); if(!el || el.querySelector("[data-myapp]")) return;
-  const html = MYAPPS.map(([k,l])=>`<button class="tab myapp" type="button" data-myapp="${k}" title="Open ${l}">${l} ↗</button>`).join(""); const sb = el.querySelector(".tab.search"); if(sb) sb.insertAdjacentHTML("beforebegin", html); else el.insertAdjacentHTML("beforeend", html); }; }
+{ const _dt = drawTabs; drawTabs = function(){ _dt(); const tabs = document.getElementById("tabs"); if(!tabs || tabs.querySelector(".appswitch")) return;
+  const pill = (k, l, dot, on) => `<button class="apill${on?" on":""}" type="button" ${on?'aria-current="page"':`data-myapp="${k}" title="Open ${l}"`}><span class="adot" style="background:${dot}"></span>${l}</button>`;
+  tabs.insertAdjacentHTML("afterbegin", `<div class="appswitch">${pill("studio","Studio","#5E7A43",true)}${pill("aba","Art by Anuprita","#A8432C",false)}${pill("rangkosh","Rang Kosh","#C8902F",false)}</div>`); }; }
 function appSheet(k){ const l = (MYAPPS.find(x=>x[0]===k)||[])[1]||k;
   openSheet(`${l}: link`, `<div class="stack-s"><div class="small muted">Paste the address you use to open ${esc(l)}, for example its Cloudflare Pages address (https://….pages.dev). It is saved in your private studio settings, so the button opens it from then on, on every device.</div>
     <label class="f"><span>Address</span><input class="in" id="app-url" type="url" placeholder="https://" value="${attr(appLink(k))}" autofocus></label>
@@ -4095,9 +4096,9 @@ function appSheet(k){ const l = (MYAPPS.find(x=>x[0]===k)||[])[1]||k;
 document.addEventListener("click", e => { const el = e.target.closest && e.target.closest("[data-myapp]"); if(!el) return; e.preventDefault(); e.stopPropagation();
   const k = el.dataset.myapp; const u = appLink(k);
   if(u && !e.altKey){ const w = window.open(u, "_blank", "noopener"); if(!w) location.href = u; } else appSheet(k); }, true);
-{ const st = document.createElement("style"); st.textContent = `.tab.myapp{opacity:.85;border-style:dashed}`; document.head.appendChild(st); }
+{ const st = document.createElement("style"); st.textContent = `.appswitch{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:2px 0 10px}.apill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-strong,#ddd);background:var(--surface,#fbf8f3);color:var(--ink,#2B2622);border-radius:999px;padding:7px 16px;font:600 .92rem/1.2 inherit;cursor:pointer}.apill.on{background:#2B2622;color:#FBF8F3;border-color:#2B2622;cursor:default}.adot{width:10px;height:10px;border-radius:50%;flex:none}`; document.head.appendChild(st); }
 { const _sv = VIEWS.settings; VIEWS.settings = function(){ const h = _sv();
-  const box = `<section class="panel"><div class="hd"><h2>My other apps</h2></div><div class="bd stack-s"><div class="small muted">The buttons at the end of the top tabs open these. Tap one to set or change its address.</div><div class="row">${MYAPPS.map(([k,l])=>`<button class="btn sm" data-myapp-set="${k}">${esc(l)}: ${appLink(k)?"change link":"add link"}</button>`).join("")}</div></div></section>`;
+  const box = `<section class="panel"><div class="hd"><h2>My other apps</h2></div><div class="bd stack-s"><div class="small muted">The Art by Anuprita and Rang Kosh buttons at the top of every page open these. Tap one to set or change its address.</div><div class="row">${MYAPPS.map(([k,l])=>`<button class="btn sm" data-myapp-set="${k}">${esc(l)}: ${appLink(k)?"change link":"add link"}</button>`).join("")}</div></div></section>`;
   return h.replace('<div class="stack">', '<div class="stack">' + box); }; }
 document.addEventListener("click", e => { const el = e.target.closest && e.target.closest("[data-myapp-set]"); if(!el) return; e.preventDefault(); appSheet(el.dataset.myappSet); });
 
