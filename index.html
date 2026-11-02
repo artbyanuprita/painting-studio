@@ -37,7 +37,7 @@ window.__auth = (function(){
       g.innerHTML = '<div style="max-width:380px;width:100%;text-align:center;font-family:Hind,system-ui,sans-serif;color:var(--ink,#2a211b)">' +
         '<img src="icon-192.png" alt="" width="84" height="84" style="display:block;margin:0 auto 14px">' +
         '<h1 style="font-family:Martel,Georgia,serif;font-size:24px;margin:0 0 6px">Indian Painting Studio</h1>' +
-        '<p style="margin:0 0 18px;opacity:.75">Sign in with your studio Google account<br>(anupritasingh or anupritakhare)</p>' +
+        '<p style="margin:0 0 18px;opacity:.75">Sign in with your studio Google account</p>' +
         '<div id="signin-btn" style="display:flex;justify-content:center;min-height:44px"></div>' +
         '<p id="signin-msg" style="margin:14px 0 0;font-size:14px;color:#9a2b12"></p></div>';
       (document.body || document.documentElement).appendChild(g);
@@ -71,7 +71,7 @@ window.__auth = (function(){
     token: function(){ if(valid()) return Promise.resolve(tok); return new Promise(function(res){ waiters.push(res); ask(lastMsg); }); },
     reset: function(err){
       tok = null; exp = 0; try{ localStorage.removeItem(KEY); }catch(e){}
-      if(/^not_allowed:/.test(err || "")){ lastMsg = "“" + String(err).split(": ")[1] + "” isn't one of the studio accounts. Choose anupritasingh or anupritakhare."; try{ google.accounts.id.disableAutoSelect(); }catch(e){} }
+      if(/^not_allowed:/.test(err || "")){ lastMsg = "“" + String(err).split(": ")[1] + "” isn't one of the studio accounts. Choose your studio account."; try{ google.accounts.id.disableAutoSelect(); }catch(e){} }
       else lastMsg = "";
     },
     email: function(){ return email; },
@@ -1746,7 +1746,7 @@ VIEWS.settings = function(){
     ${missing?`<div class="row"><button class="btn" data-act="import-missing">Import ${missing} missing source paintings</button><span class="small muted">Adds only IDs not already present; never overwrites.</span></div>`:`<div class="small muted">All ${(S.ref.seed||[]).length} source paintings are present.</div>`}</div></section>
   <section class="panel"><div class="hd"><h2>Import report</h2></div><div class="bd">${R?importReport(R):"Loading…"}</div></section>
   <section class="panel"><div class="hd"><h2>Using it on Android</h2></div><div class="bd small stack-s">
-    <div>Open artbyanuprita.github.io/painting-studio in Chrome, sign in with anupritasingh or anupritakhare, then use the menu ⋮ › Add to Home screen. The icon opens the studio like an app.</div>
+    <div>Open artbyanuprita.github.io/painting-studio in Chrome, sign in with your studio account, then use the menu ⋮ › Add to Home screen. The icon opens the studio like an app.</div>
     <div><b>Works offline:</b> nothing. Your records live in the studio database and need a connection. <b>Saving:</b> every edit saves automatically; the dot under the title shows Saving, Saved, or a red retry message.</div></div></section></div>`;
 };
 function importReport(R){
@@ -2904,9 +2904,9 @@ function platWsChips(recs){
   for(const w of recs){ const e = wsEff(w); const a = e.art || "Other"; if(!by.has(a)) by.set(a, []); by.get(a).push({w, t:e.title, n:wsSessions(w.id).length}); }
   const groups = [...by.entries()].map(([a,l])=>[a, l.sort((x,y)=>x.t.localeCompare(y.t)), l.reduce((s,x)=>s+x.n,0)]).sort((x,y)=>y[2]-x[2] || x[0].localeCompare(y[0]));
   const vids = groups.reduce((s,g)=>s+g[2],0);
-  return `<section class="panel" data-nofold><div class="hd"><h2>Workshops</h2><span class="small muted num">${recs.length} · ${vids.toLocaleString()} videos</span></div><div class="bd stack-s">
+  return `<section class="panel"><div class="hd"><h2>Workshops</h2><span class="small muted num">${recs.length} · ${vids.toLocaleString()} videos</span></div><div class="bd stack-s">
     <div class="small muted">The number in brackets is how many class videos are linked. Tap a workshop to see them.</div>
-    ${groups.map(([a,l,n])=>`<div class="stack-s"><div class="cap">${esc(a)} <span class="muted num">· ${l.length} workshops · ${n} videos</span></div><div class="row" style="flex-wrap:wrap;gap:6px">${l.map(x=>`<button class="chip wschip${x.n?"":" none"}" data-ws-open="${attr(x.w.id)}">${esc(x.t)} <span class="num">(${x.n})</span></button>`).join("")}</div></div>`).join("")}
+    ${groups.map(([a,l,n],gi)=>{ const fk = "plat:"+(S.ui.platSel||"")+":"+a; return `<details class="mgrp" data-fold="${attr(fk)}"${foldOpen(fk, gi===0)?" open":""}><summary class="row between" style="padding:6px 0;gap:8px"><span class="cap" style="flex:1">${esc(a)} <span class="muted num">· ${l.length} workshops · ${n} videos</span></span>${ICON.down}</summary><div class="row" style="flex-wrap:wrap;gap:6px;padding-bottom:8px">${l.map(x=>`<button class="chip wschip${x.n?"":" none"}" data-ws-open="${attr(x.w.id)}">${esc(x.t)} <span class="num">(${x.n})</span></button>`).join("")}</div></details>`; }).join("")}
   </div></section>`;
 }
 /* ---- Workshops › Platforms: one tab per platform, then its art forms, teachers and records */
@@ -2924,7 +2924,7 @@ function platformsView(){
     ${split(arts).length?`<section class="panel"><div class="hd"><h2>Art forms</h2><span class="small muted num">${split(arts).length}</span></div><div class="bd"><div class="row" style="flex-wrap:wrap;gap:6px">${split(arts).map(a=>`<a href="#" class="pill outline" data-wfilter="art" data-v="${attr(a)}">${esc(a)}</a>`).join("")}</div></div></section>`:""}
     ${split(teachers).length?`<section class="panel"><div class="hd"><h2>Teachers</h2><span class="small muted num">${split(teachers).length}</span></div><div class="bd"><div class="row" style="flex-wrap:wrap;gap:6px">${split(teachers).map(t=>`<a href="#" class="pill outline" data-teacher="${attr(t)}">${esc(t)}</a>`).join("")}</div></div></section>`:""}
     ${notes?`<div class="small muted">${esc(notes)}</div>`:""}
-    <section class="panel" data-nofold><div class="hd"><h2>Workshops on ${esc(name)}</h2><span class="small muted num">${shown.length}</span></div><div class="bd stack-s">
+    <section class="panel"><div class="hd"><h2>Workshops on ${esc(name)}</h2><span class="small muted num">${shown.length}</span></div><div class="bd stack-s">
       <input class="in" type="search" data-ui="platQ" value="${attr(S.ui.platQ||"")}" placeholder="Search ${attr(name)} workshops">
       <div class="list">${shown.slice(0, S.ui.platLimit||60).map(w=>wsLine(w)).join("")}</div>
       ${shown.length>(S.ui.platLimit||60)?`<button class="btn sm" data-plat-more>Show more (${shown.length-(S.ui.platLimit||60)} left)</button>`:""}</div></section>`;
