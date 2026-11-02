@@ -4080,6 +4080,27 @@ function uvSheet(preId){
 { const _rv = VIEWS.recs; VIEWS.recs = function(){ const h = _rv(); return h.replace(/(<h2[^>]*>[\s\S]*?<\/h2>)/, `$1<div class="row" style="margin:4px 0"><button class="btn sm primary" data-uv-add="">＋ Add class videos</button></div>`); }; }
 document.addEventListener("click", e => { const el = e.target.closest && e.target.closest("[data-uv-add]"); if(!el) return; e.preventDefault(); e.stopPropagation(); uvSheet(el.dataset.uvAdd || ""); }, true);
 
+/* ---- links to her other two art apps (Rang Kosh, Art by Anuprita); addresses are kept in her private settings, not in the page */
+const MYAPPS = [["rangkosh","Rang Kosh"],["aba","Art by Anuprita"]];
+function appLink(k){ return ((S.settings && S.settings.appLinks) || {})[k] || ""; }
+{ const _dt = drawTabs; drawTabs = function(){ _dt(); const el = document.querySelector("#tabs .maintabs"); if(!el || el.querySelector("[data-myapp]")) return;
+  const html = MYAPPS.map(([k,l])=>`<button class="tab myapp" type="button" data-myapp="${k}" title="Open ${l}">${l} ↗</button>`).join(""); const sb = el.querySelector(".tab.search"); if(sb) sb.insertAdjacentHTML("beforebegin", html); else el.insertAdjacentHTML("beforeend", html); }; }
+function appSheet(k){ const l = (MYAPPS.find(x=>x[0]===k)||[])[1]||k;
+  openSheet(`${l}: link`, `<div class="stack-s"><div class="small muted">Paste the address you use to open ${esc(l)}, for example its Cloudflare Pages address (https://….pages.dev). It is saved in your private studio settings, so the button opens it from then on, on every device.</div>
+    <label class="f"><span>Address</span><input class="in" id="app-url" type="url" placeholder="https://" value="${attr(appLink(k))}" autofocus></label>
+    <div class="row"><button class="btn primary" data-sh="save">Save</button>${appLink(k)?`<button class="btn" data-sh="open">Open now</button>`:""}<button class="btn ghost" data-sh="close">Cancel</button></div></div>`,
+  { save: () => { const u = v("app-url"); if(u && !/^https?:\/\//i.test(u)){ toast("The address should start with https://"); return; }
+      S.settings.appLinks = {...(S.settings.appLinks||{}), [k]: u}; saveSettings(); closeOverlay(true); toast(u ? `${l} link saved.` : `${l} link removed.`); },
+    open: () => { closeOverlay(true); window.open(appLink(k), "_blank", "noopener"); } }); }
+document.addEventListener("click", e => { const el = e.target.closest && e.target.closest("[data-myapp]"); if(!el) return; e.preventDefault(); e.stopPropagation();
+  const k = el.dataset.myapp; const u = appLink(k);
+  if(u && !e.altKey){ const w = window.open(u, "_blank", "noopener"); if(!w) location.href = u; } else appSheet(k); }, true);
+{ const st = document.createElement("style"); st.textContent = `.tab.myapp{opacity:.85;border-style:dashed}`; document.head.appendChild(st); }
+{ const _sv = VIEWS.settings; VIEWS.settings = function(){ const h = _sv();
+  const box = `<section class="panel"><div class="hd"><h2>My other apps</h2></div><div class="bd stack-s"><div class="small muted">The buttons at the end of the top tabs open these. Tap one to set or change its address.</div><div class="row">${MYAPPS.map(([k,l])=>`<button class="btn sm" data-myapp-set="${k}">${esc(l)}: ${appLink(k)?"change link":"add link"}</button>`).join("")}</div></div></section>`;
+  return h.replace('<div class="stack">', '<div class="stack">' + box); }; }
+document.addEventListener("click", e => { const el = e.target.closest && e.target.closest("[data-myapp-set]"); if(!el) return; e.preventDefault(); appSheet(el.dataset.myappSet); });
+
 window.__studio={get S(){return S;},toast,savePainting,ACTS,downloadJournal,retryFailed};
 boot();
 })();
