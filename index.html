@@ -2904,9 +2904,9 @@ function platWsChips(recs){
   for(const w of recs){ const e = wsEff(w); const a = e.art || "Other"; if(!by.has(a)) by.set(a, []); by.get(a).push({w, t:e.title, n:wsSessions(w.id).length}); }
   const groups = [...by.entries()].map(([a,l])=>[a, l.sort((x,y)=>x.t.localeCompare(y.t)), l.reduce((s,x)=>s+x.n,0)]).sort((x,y)=>y[2]-x[2] || x[0].localeCompare(y[0]));
   const vids = groups.reduce((s,g)=>s+g[2],0);
-  return `<section class="panel" data-nofold><div class="hd"><h2>Workshops</h2><span class="small muted num">${recs.length} · ${vids.toLocaleString()} videos</span></div><div class="bd stack-s">
+  return `<section class="panel"><div class="hd"><h2>Workshops</h2><span class="small muted num">${recs.length} · ${vids.toLocaleString()} videos</span></div><div class="bd stack-s">
     <div class="small muted">The number in brackets is how many class videos are linked. Tap a workshop to see them.</div>
-    ${groups.map(([a,l,n])=>`<div class="stack-s"><div class="cap">${esc(a)} <span class="muted num">· ${l.length} workshops · ${n} videos</span></div><div class="row" style="flex-wrap:wrap;gap:6px">${l.map(x=>`<button class="chip wschip${x.n?"":" none"}" data-ws-open="${attr(x.w.id)}">${esc(x.t)} <span class="num">(${x.n})</span></button>`).join("")}</div></div>`).join("")}
+    ${groups.map(([a,l,n],gi)=>{ const fk = "plat:"+(S.ui.platSel||"")+":"+a; return `<details class="mgrp" data-fold="${attr(fk)}"${foldOpen(fk, gi===0)?" open":""}><summary class="row between" style="padding:6px 0;gap:8px"><span class="cap" style="flex:1">${esc(a)} <span class="muted num">· ${l.length} workshops · ${n} videos</span></span>${ICON.down}</summary><div class="row" style="flex-wrap:wrap;gap:6px;padding-bottom:8px">${l.map(x=>`<button class="chip wschip${x.n?"":" none"}" data-ws-open="${attr(x.w.id)}">${esc(x.t)} <span class="num">(${x.n})</span></button>`).join("")}</div></details>`; }).join("")}
   </div></section>`;
 }
 /* ---- Workshops › Platforms: one tab per platform, then its art forms, teachers and records */
@@ -2930,7 +2930,7 @@ function platformsView(){
     ${split(arts).length?`<section class="panel"><div class="hd"><h2>Art forms</h2><span class="small muted num">${split(arts).length}</span></div><div class="bd"><div class="row" style="flex-wrap:wrap;gap:6px">${split(arts).map(a=>`<a href="#" class="pill outline" data-wfilter="art" data-v="${attr(a)}">${esc(a)}</a>`).join("")}</div></div></section>`:""}
     ${tList.length?`<section class="panel"><div class="hd"><h2>Teachers</h2><span class="small muted num">${tList.length}</span></div><div class="bd"><div class="row" style="flex-wrap:wrap;gap:6px">${tList.map(([t,n])=>`<a href="#" class="pill outline" data-teacher="${attr(t)}">${esc(t)}${n?` <span class="num muted">${n}</span>`:""}</a>`).join("")}</div></div></section>`:""}
     ${notes?`<div class="small muted">${esc(notes)}</div>`:""}
-    <section class="panel" data-nofold><div class="hd"><h2>Workshops on ${esc(name)}</h2><span class="small muted num">${shown.length}</span></div><div class="bd stack-s">
+    <section class="panel"><div class="hd"><h2>Workshops on ${esc(name)}</h2><span class="small muted num">${shown.length}</span></div><div class="bd stack-s">
       <input class="in" type="search" data-ui="platQ" value="${attr(S.ui.platQ||"")}" placeholder="Search ${attr(name)} workshops">
       <div class="list">${shown.slice(0, S.ui.platLimit||60).map(w=>wsLine(w)).join("")}</div>
       ${shown.length>(S.ui.platLimit||60)?`<button class="btn sm" data-plat-more>Show more (${shown.length-(S.ui.platLimit||60)} left)</button>`:""}</div></section>`;
