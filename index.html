@@ -1412,7 +1412,7 @@ function wsLine(w, right=""){ const e = wsEff(w); const r = wsReview(w);
 function teacherIndex(){
   if(teacherIndex.cache) return teacherIndex.cache;
   const T = new Map(); const get = n => { const k = norm(n).trim(); if(!k) return null; if(!T.has(k)) T.set(k, {name:n.trim(), ws:[], paintings:[], arts:new Set(), plats:new Set(), sheet:null, variants:new Set()}); return T.get(k); };
-  for(const w of IX.wsList){ const n = wsEff(w).teacher; if(!n) continue; const t = get(n); t.ws.push(w); if(w["Art Form / Tradition"]) t.arts.add(w["Art Form / Tradition"]); if(w["Provider group"]) t.plats.add(w["Provider group"]); if(w["Teacher / Instructor"] && w["Teacher / Instructor"]!==t.name) t.variants.add(w["Teacher / Instructor"]); }
+  for(const w of IX.wsList){ const n = wsEff(w).teacher; if(!n) continue; const t = get(n); t.ws.push(w); if(w["Art Form / Tradition"]) t.arts.add(w["Art Form / Tradition"]); { const pp = wsEff(w).platform; if(pp && !/^platform not recorded$/i.test(pp)) t.plats.add(pp); } if(w["Teacher / Instructor"] && w["Teacher / Instructor"]!==t.name) t.variants.add(w["Teacher / Instructor"]); }
   for(const p of S.paintings.values()) for(const n of String(p.teacher||"").split(/;/)){ const t = get(n); if(t){ t.paintings.push(p); if(p.tradition) t.arts.add(p.tradition); } }
   const TS = S.ref.workshops && S.ref.workshops.teachers; if(TS){ const F = TS.fields; for(const r of TS.rows){ const o={}; F.forEach((f,i)=>o[f]=r[i]); const t = T.get(norm(o["Teacher / Instructor"]).trim()); if(t) t.sheet = o; } }
   teacherIndex.cache = T; teacherIndex.ver = S.paintings.size+":"+S.meta.size; return T;
@@ -1606,7 +1606,7 @@ VIEWS.workshops = function(){
 function wsRecords(){
   const f = S.ui.wf; const q = norm(S.ui.wq.trim());
   const uniq = k => [...new Set(IX.wsList.map(w=>w[k]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  const list = IX.wsList.filter(w => (!f.art || w["Art Form / Tradition"]===f.art) && (!f.teacher || wsEff(w).teacher===f.teacher || w["Teacher (reconciled)"]===f.teacher || w["Teacher / Instructor"]===f.teacher) && (!f.prov || w["Provider group"]===f.prov || w["Platform / Provider"]===f.prov) && (!f.type || w["Record Type"]===f.type) && (!f.review || (f.review==="Yes" ? wsNeedsReview(w) : f.review==="mine" ? !!(wsReview(w)&&wsReview(w).status!=="skipped") : !wsNeedsReview(w))) && (!q || w._q.includes(q) || norm(wsEff(w).teacher).includes(q) || norm(getMeta("workshop",w.id).notes).includes(q) || (wsEff(w).edited && norm(Object.values(wsEff(w)).join(" ")).includes(q))));
+  const list = IX.wsList.filter(w => (!f.art || w["Art Form / Tradition"]===f.art) && (!f.teacher || wsEff(w).teacher===f.teacher || w["Teacher (reconciled)"]===f.teacher || w["Teacher / Instructor"]===f.teacher) && (!f.prov || wsEff(w).platform===f.prov || w["Provider group"]===f.prov || w["Platform / Provider"]===f.prov) && (!f.type || w["Record Type"]===f.type) && (!f.review || (f.review==="Yes" ? wsNeedsReview(w) : f.review==="mine" ? !!(wsReview(w)&&wsReview(w).status!=="skipped") : !wsNeedsReview(w))) && (!q || w._q.includes(q) || norm(wsEff(w).teacher).includes(q) || norm(getMeta("workshop",w.id).notes).includes(q) || (wsEff(w).edited && norm(Object.values(wsEff(w)).join(" ")).includes(q))));
   const shown = list.slice(0, S.ui.wlimit);
   const nOn = Object.values(f).filter(Boolean).length;
   return `<input class="in" type="search" data-ui="wq" value="${attr(S.ui.wq)}" placeholder="Search titles, teachers, art forms, platforms, notes" aria-label="Search workshops">
@@ -2911,10 +2911,13 @@ function platWsChips(recs){
 }
 /* ---- Workshops › Platforms: one tab per platform, then its art forms, teachers and records */
 function platformsView(){
-  const P = S.ref.workshops.platforms; const rows = P.rows.slice().sort((a,b)=>(+b[1]||0)-(+a[1]||0));
+  const P = S.ref.workshops.platforms; const pOf = w => wsEff(w).platform || w["Platform / Provider"] || "Platform not recorded";
+  const byP = new Map(); for(const w of IX.wsList){ const k = pOf(w); if(!byP.has(k)) byP.set(k, []); byP.get(k).push(w); }
+  const stat = new Map(P.rows.map(r=>[r[0], r]));
+  const rows = [...byP.entries()].map(([k, ws]) => { const r = stat.get(k) || []; const arts = [...new Set(ws.map(w=>wsEff(w).art).filter(Boolean))].sort(); return [k, String(ws.length), String(arts.length), "", arts.join("; "), r[5]||"", r[6]||""]; }).sort((a,b)=>(+b[1]||0)-(+a[1]||0));
   const cur = rows.find(r=>r[0]===S.ui.platSel) || rows[0]; if(!cur) return `<div class="empty">No platforms.</div>`;
   const [name, count, nArt, nTeach, arts, teachers, notes] = cur;
-  const recs = IX.wsList.filter(w => (w["Platform / Provider"]||"Platform not recorded") === name || (name==="Platform not recorded" && !w["Platform / Provider"]));
+  const recs = byP.get(name) || [];
   const q = norm(S.ui.platQ||""); const shown = recs.filter(w => !q || w._q.includes(q)).sort((x,y)=>(wsSessions(y.id).length>0)-(wsSessions(x.id).length>0));
   const withRec = recs.filter(w=>wsSessions(w.id).length).length;
   const split = s => String(s||"").split(/;\s*/).map(x=>x.trim()).filter(Boolean);
@@ -4171,6 +4174,57 @@ function wtTables(){
   M.rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0]))); T.rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
 }
 { const _r2 = render; render = function(){ try{ wtTables(); }catch(e){ console.warn(e); } return _r2.apply(this, arguments); }; }
+
+/* ---- Platform for workshops whose source says "Platform not recorded". Bhagwan Thakur teaches only through MIKAS
+   (Anuprita, 2 Nov 2026). A platform she sets on a workshop (review.fix.platform) always wins. */
+// NIMA in one place; SKV = Shilpkala Vidyapeeth (Anuprita, 2 Nov 2026)
+const WP_BYID = {"WR0437": "NIMA", "WR0438": "NIMA", "WR0439": "NIMA", "WR0440": "NIMA", "WR0441": "NIMA", "WR0442": "NIMA", "WR0443": "NIMA", "WR0448": "Shilpkala Vidyapeeth", "WR0449": "Shilpkala Vidyapeeth", "WR0450": "Shilpkala Vidyapeeth", "WR0451": "Shilpkala Vidyapeeth", "WR0452": "Shilpkala Vidyapeeth", "WR0453": "Shilpkala Vidyapeeth", "WR0454": "Shilpkala Vidyapeeth", "WR0284": "Shilpkala Vidyapeeth", "WR0285": "Shilpkala Vidyapeeth", "WR0286": "Shilpkala Vidyapeeth", "WR0287": "Shilpkala Vidyapeeth", "WR0288": "Shilpkala Vidyapeeth", "WR0490": "Shilpkala Vidyapeeth", "WR0492": "Shilpkala Vidyapeeth", "WR0494": "Shilpkala Vidyapeeth", "WR0606": "Shilpkala Vidyapeeth"};
+const WP_GROUP = {"skv":"Shilpkala Vidyapeeth","skv course series":"Shilpkala Vidyapeeth","shilpkala":"Shilpkala Vidyapeeth","nima (neeta’s folk-art courses)":"NIMA"};
+const WP_RULES = [{teacher:/^bhagwan thakur$/i, platform:"MIKAS"}];
+const wpNone = p => !p || /^platform not recorded$/i.test(String(p).trim());
+{ const _we2 = wsEff; wsEff = function(w){ const e = _we2(w); if(!w) return e;
+    const fx = ((wsReview(w)||{}).fix||{}); if(!fx.platform){ if(WP_BYID[w.id]) e.platform = WP_BYID[w.id]; else if(WP_GROUP[String(e.platform||"").trim().toLowerCase()]) e.platform = WP_GROUP[String(e.platform).trim().toLowerCase()]; }
+    if(!wpNone(e.platform)) return e;
+    const r = WP_RULES.find(r => r.teacher.test(String(e.teacher||"").trim())); if(r) e.platform = r.platform; return e; }; }
+function wpSuggest(w){ const t = alNorm(wsEff(w).teacher); if(!t) return [];
+  const c = new Map(); for(const x of IX.wsList){ if(x===w || alNorm(wsEff(x).teacher)!==t) continue; const p = wsEff(x).platform; if(wpNone(p)) continue; c.set(p, (c.get(p)||0)+1); }
+  return [...c.entries()].sort((a,b)=>b[1]-a[1]); }
+function wpSheet(id){
+  const w = IX.wsById.get(id); if(!w) return; const e = wsEff(w); const sug = wpSuggest(w);
+  const names = [...new Set(IX.wsList.map(x=>wsEff(x).platform).filter(p=>!wpNone(p)))].sort((a,b)=>a.localeCompare(b));
+  const same = e.teacher ? IX.wsList.filter(x => x!==w && wpNone(wsEff(x).platform) && alNorm(wsEff(x).teacher)===alNorm(e.teacher)) : [];
+  openSheet("Change platform", `<div class="stack-s">
+    <div class="small muted">${esc(e.title)} · ${esc([e.art, e.teacher].filter(Boolean).join(" · "))}</div>
+    ${sug.length ? `<div class="small">${esc(e.teacher)}'s other workshops are on: ${sug.map(([p,n])=>`<a href="#" data-wp-pick="${attr(p)}">${esc(p)}</a> (${n})`).join(", ")}</div>` : ""}
+    <label class="f"><span>Platform</span><input class="in" id="wp-name" list="wp-list" value="${attr(wpNone(e.platform) ? (sug[0] ? sug[0][0] : "") : e.platform)}" placeholder="For example, MIKAS">
+      <datalist id="wp-list">${names.map(n=>`<option value="${attr(n)}">`).join("")}</datalist></label>
+    ${same.length ? `<label class="row" style="gap:8px;align-items:flex-start"><input type="checkbox" id="wp-all"><span class="small">Also set it for the other <b>${same.length}</b> ${esc(e.teacher)} workshop${same.length>1?"s":""} with no platform</span></label>` : ""}
+    <div class="row"><button class="btn primary" data-sh="save">Save platform</button><button class="btn" data-sh="close">Cancel</button></div></div>`,
+  { save: () => { const name = v("wp-name").trim(); const all = document.getElementById("wp-all"); const ids = [id, ...(all && all.checked ? same.map(x=>x.id) : [])];
+      for(const i of ids){ const x = IX.wsById.get(i); const old = getMeta("workshop", i).review || {}; const fix = {...(old.fix||{})};
+        if(name && name!==x["Provider group"]) fix.platform = name; else delete fix.platform;
+        saveMeta("workshop", i, {review:{...old, status:Object.keys(fix).length ? "fixed" : (old.status||"confirmed"), at:nowISO(), fix}}); }
+      teacherIndex.cache = null; logAct("learning", `Platform ${name||"cleared"} set on ${ids.length} workshop${ids.length>1?"s":""}`);
+      closeOverlay(true); setTimeout(()=>{ render(); sheetWorkshop(id); }, 150); toast(name ? `Platform saved: ${name}` : "Platform cleared"); } });
+}
+document.addEventListener("click", e => { const pk = e.target.closest && e.target.closest("[data-wp-pick]"); if(pk){ e.preventDefault(); const i = document.getElementById("wp-name"); if(i) i.value = pk.dataset.wpPick; return; }
+  const el = e.target.closest && e.target.closest("[data-wp-edit]"); if(!el) return; e.preventDefault(); e.stopPropagation(); wpSheet(el.dataset.wpEdit); }, true);
+{ const _sw = sheetWorkshop; sheetWorkshop = function(id){ _sw(id); const w = IX.wsById.get(id); const tb = document.querySelector("#overlay [data-wt-edit]"); if(!w || !tb || document.querySelector("#overlay [data-wp-edit]")) return;
+    const p = wsEff(w).platform; const row = tb.closest(".row"); const d = document.createElement("div"); d.className = "row"; d.style.cssText = "margin:0 0 8px;gap:8px;align-items:center;flex-wrap:wrap";
+    d.innerHTML = `<span class="small"><b>Platform:</b> ${wpNone(p) ? `<span class="muted">not recorded</span>` : esc(p)}</span><button class="btn sm" data-wp-edit="${attr(id)}">${wpNone(p) ? "＋ Add platform" : "✎ Change platform"}</button>`;
+    row.after(d);
+    if(!wpNone(p)) document.querySelectorAll("#overlay dt").forEach(dt => { if(/^Platform \/ Provider$/.test(dt.textContent.trim())){ const dd = dt.nextElementSibling; if(dd && dd.textContent.trim()!==p) dd.textContent = p; } }); }; }
+
+/* ---- Rajshri workshops Anuprita listed on 2 Nov 2026 (not in the original archive). They behave like workshops
+   she adds herself: videos and a teacher can be added from the workshop sheet. */
+const WK_SEED = [
+  {ref:"WK001", title:"Ganesha Story", art:"Pattachitra", platform:"Rajshri"},
+  {ref:"WK002", title:"Sunderkand", art:"Pattachitra", platform:"Rajshri"},
+  {ref:"WK003", title:"Durga Saptashati", art:"Phad", platform:"Rajshri"},
+  {ref:"WK004", title:"Sunderkand", art:"Phad", platform:"Rajshri"},
+  {ref:"WK005", title:"Jagannath ji Story", art:"Pattachitra", platform:"Rajshri"},
+].map(m => ({kind:"userws", teacher:"", ...m}));
+{ const _uw = uvWorkshops; uvWorkshops = function(){ const mine = _uw(); const have = new Set(mine.map(m=>m.ref)); return [...mine, ...WK_SEED.filter(m=>!have.has(m.ref))]; }; }
 
 window.__studio={get S(){return S;},get IX(){return IX;},render:()=>render(),wsEff:(w)=>wsEff(w),teacherIndex:()=>teacherIndex(),sheetWorkshop:(i)=>sheetWorkshop(i),toast,savePainting,ACTS,downloadJournal,retryFailed};
 boot();
