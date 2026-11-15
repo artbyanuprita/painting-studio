@@ -1172,6 +1172,7 @@ VIEWS.home = function(){
     <div class="card stat"><div class="cap">Paintings completed</div><div class="v num">${st.done} / ${st.planned}</div><div class="cap">${st.pct}% completed</div></div>
     <div class="card stat"><div class="cap">In progress</div><div class="v num">${st.active}</div><div class="cap">Active studio projects</div></div>
     <div class="card stat"><div class="cap">Studio hours</div><div class="v num">${fmtHours(st.hours)}</div><div class="cap">Recorded painting hours</div></div>
+    <div class="card stat" id="sdStat" style="cursor:pointer">${window.sdStatInner?window.sdStatInner():""}</div>
     <div class="card stat"><div class="cap">Workshop archive</div><div class="v num">${st.ws.toLocaleString()}</div><div class="cap">Historical workshop/course records — not paintings</div></div>
   </div>
   <div class="row"><button class="btn primary" data-act="new-painting">${ICON.plus} Quick add painting</button><button class="btn" data-act="session-quick">${ICON.plus} Quick add studio session</button><button class="btn" data-act="new-task">${ICON.plus} Task</button></div>
@@ -4355,6 +4356,40 @@ boot();
   // On the laptop there are no installed apps: open the private web versions instead
   var ABA_WEB = 'https://anu-studio-notes.pages.dev/', RK_WEB = 'https://anu-colour-notes.pages.dev/index.html';
   function note(t){ var el=document.createElement('div'); el.textContent=t; el.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2A2018;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:99999'; document.body.appendChild(el); setTimeout(function(){ el.remove(); },3000); }
+  /* ---- साधना (30-day practice app): open it, and show its practice hours here ----
+     साधना syncs through the Art by Anuprita workbook sheet (store "sadhana"), read with the Studio passcode. */
+  var SD_WEB = 'https://claude.ai/artifact/6MRpx66BhRqiAwVt81ENaz', SD_SHEET = 'https://script.google.com/macros/s/AKfycbwwL_BfbP64b0QioZ9nBbnYbXA-1h4J4Pa8ueCvpHeY_p4lZ33JgBW5AqWShUloDaq5Yw/exec';
+  window.sdOpen = function(path){ if(!android){ window.open(SD_WEB + (path ? '#/' + path : ''), 'anuprita-sadhana'); return; } open('sadhana','com.artbyanuprita.sadhana',path); };
+  function sdH(m){ var h=(+m||0)/60; return (Math.round(h*10)/10).toLocaleString(); }
+  function sdGet(k,d){ try{ var v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(x){ return d; } }
+  function sdSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(x){} }
+  function sdCompute(items){
+    var now=new Date(), wk=new Date(now); wk.setDate(now.getDate()-((now.getDay()+6)%7)); var wkS=wk.toISOString().slice(0,10), moS=now.toISOString().slice(0,8)+'01', t={w:0,m:0,a:0,days:0};
+    items.forEach(function(it){ if(it.store!=='sadhana'||it.deleted||!/:d\d+$/.test(it.id)) return; var r=it.data||{}; if(!r.date) return; var m=+((r.f||{}).min||0)||(r.complete?60:0); if(!m) return; t.a+=m; if(r.date>=moS) t.m+=m; if(r.date>=wkS) t.w+=m; if(r.complete) t.days++; });
+    return t;
+  }
+  window.sdStatInner = function(){
+    var t=sdGet('st.sadhanaHours',null), linked=!!sdGet('st.sadhanaPass','');
+    if(!linked) return '<div class="cap">साधना practice</div><div class="v num" style="font-size:1.1rem">Connect</div><div class="cap">Tap to show your 30-day practice hours here</div>';
+    if(!t) return '<div class="cap">साधना practice</div><div class="v num">…</div><div class="cap">Loading</div>';
+    return '<div class="cap">साधना practice</div><div class="v num">'+sdH(t.a)+'</div><div class="cap">'+sdH(t.w)+' h this week · '+sdH(t.m)+' h this month · '+t.days+' days done</div>';
+  };
+  var sdBusy=false, sdAt=0;
+  function sdFill(){ var el=document.getElementById('sdStat'); if(el) el.innerHTML=window.sdStatInner(); }
+  function sdLoad(force){
+    var pass=sdGet('st.sadhanaPass',''); if(!pass||sdBusy||(!force&&Date.now()-sdAt<600000)) return;
+    sdBusy=true; sdAt=Date.now();
+    fetch(SD_SHEET,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'wbPull',since:0,passcode:pass})}).then(function(r){return r.json();})
+      .then(function(d){ if(!d||d.ok===false) throw new Error((d&&d.error)||'no answer'); sdSet('st.sadhanaHours', sdCompute(d.items||[])); sdFill(); })
+      .catch(function(e){ if(/passcode/i.test(String(e.message))){ sdSet('st.sadhanaPass',''); note('That Studio passcode did not work.'); } sdFill(); })
+      .then(function(){ sdBusy=false; });
+  }
+  document.addEventListener('click', function(ev){
+    if(!ev.target.closest('#sdStat')) return;
+    if(!sdGet('st.sadhanaPass','')){ var p=prompt('Your Studio passcode (the same one साधना, Art by Anuprita and Rang Kosh use):'); if(!p) return; sdSet('st.sadhanaPass',p.trim()); sdFill(); sdLoad(true); return; }
+    sdOpen('hours');
+  });
+  new MutationObserver(function(){ var el=document.getElementById('sdStat'); if(el&&!el.dataset.sd){ el.dataset.sd='1'; sdLoad(false); } }).observe(document.documentElement,{childList:true,subtree:true});
   window.rkOpen = function(path){ if(!android){ window.open(RK_WEB + (path ? '#/' + path : ''), 'anuprita-rangkosh'); return; } open('rangkosh','com.artbyanuprita.rangkosh',path); };
   window.abaOpen = function(path){ if(!android){ window.open(ABA_WEB, 'anuprita-art'); return; } open('artbyanuprita','com.artbyanuprita.app',path); };
   window.rkButton = function(r){ var m=rkMatch(r);
@@ -4365,9 +4400,10 @@ boot();
     var el=document.getElementById('appswitch'); if(!el) return;
     el.innerHTML = '<a class="on" href="#"><i style="background:#5B7444"></i>Studio</a>'
       + '<a href="#" data-app="aba"><i style="background:#A23A28"></i>Art by Anuprita</a>'
-      + '<a href="#" data-app="rk"><i style="background:#C8892B"></i>Rang Kosh</a>';
+      + '<a href="#" data-app="rk"><i style="background:#C8892B"></i>Rang Kosh</a>'
+      + '<a href="#" data-app="sd"><i style="background:#2C6E6A"></i>साधना</a>';
     el.onclick = function(ev){ var a=ev.target.closest('a'); if(!a) return; ev.preventDefault();
-      if(a.dataset.app==='aba') abaOpen(''); else if(a.dataset.app==='rk') rkOpen(''); };
+      if(a.dataset.app==='aba') abaOpen(''); else if(a.dataset.app==='rk') rkOpen(''); else if(a.dataset.app==='sd') sdOpen(''); };
   }
   if(!android){ try{ window.name = 'anuprita-studio'; }catch(e){} }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', switcher); else switcher();
