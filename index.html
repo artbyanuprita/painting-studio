@@ -848,15 +848,16 @@ function sdPlansFor(name){
   const al = SD_ALIAS[sdKey(name)]; if(al) return al.map(id => SD_IX.find(y => y[0]===id)).filter(Boolean);
   return sdAuto(name);
 }
-function sdPick(name){
+function sdPick(key){
+  const name = String(key).split("||")[0];
   const cur = sdManual(name), auto = sdAuto(name).map(x=>x[0]);
-  openSheet("साधना plan for " + name, `<div class="small muted">Pick the 30-day plan that matches this art form. It is saved with your Studio data.</div>
+  openSheet("साधना plan for " + sdStdName(name), `<div class="small muted">Pick the 30-day plan that matches this art form. It is saved with your Studio data.</div>
     <input class="in" id="sdq" type="search" placeholder="Search 276 plans" oninput="var q=this.value.toLowerCase();document.querySelectorAll('#sdl [data-k]').forEach(function(b){b.hidden=q&&b.dataset.k.indexOf(q)<0;})">
-    <div id="sdl" class="row" style="flex-wrap:wrap;gap:6px;max-height:50vh;overflow:auto;margin-top:8px">${SD_PLANS.map(([id,n])=>`<button class="btn sm${id===cur||(!cur&&auto.includes(id))?" primary":""}" data-k="${attr((n+" "+id).toLowerCase())}" onclick="sdSetLink(${attr(JSON.stringify(name))},'${id}')">${esc(n)}</button>`).join("")}</div>
-    <div class="row" style="margin-top:10px"><button class="btn" onclick="sdSetLink(${attr(JSON.stringify(name))},'-')">No plan for this one</button>${cur?`<button class="btn" onclick="sdSetLink(${attr(JSON.stringify(name))},'')">Back to automatic</button>`:""}<button class="btn" data-sh="close">Close</button></div>`, {});
+    <div id="sdl" class="row" style="flex-wrap:wrap;gap:6px;max-height:50vh;overflow:auto;margin-top:8px">${SD_PLANS.map(([id,n])=>`<button class="btn sm${id===cur||(!cur&&auto.includes(id))?" primary":""}" data-k="${attr((n+" "+id).toLowerCase())}" onclick="sdSetLink(${attr(JSON.stringify(key))},'${id}')">${esc(n)}</button>`).join("")}</div>
+    <div class="row" style="margin-top:10px"><button class="btn" onclick="sdSetLink(${attr(JSON.stringify(key))},'-')">No plan for this one</button>${cur?`<button class="btn" onclick="sdSetLink(${attr(JSON.stringify(key))},'')">Back to automatic</button>`:""}<button class="btn" data-sh="close">Close</button></div>`, {});
 }
 window.sdPick = sdPick;
-window.sdSetLink = function(name, id){ saveMeta("sdlink", sdKey(name) || String(name), {sd:id, name}); closeOverlay(true); render(); toast(id==="-" ? "Marked: no plan" : id ? "Linked to साधना" : "Back to automatic"); };
+window.sdSetLink = function(key, id){ for(const name of String(key).split("||")) saveMeta("sdlink", sdKey(name) || String(name), {sd:id, name}); closeOverlay(true); render(); toast(id==="-" ? "Marked: no plan" : id ? "Linked to साधना" : "Back to automatic"); };
 function sdAuto(name){
   const k = sdKey(name); if(k.length < 3) return [];
   const exact = SD_IX.filter(x => x[2]===k || x[3]===k); if(exact.length) return exact;
@@ -865,6 +866,20 @@ function sdAuto(name){
   return SD_IX.filter(x => near(x[2], k) || near(x[3], k)).slice(0,4);
 }
 const sdChips = (name, big) => { const L = sdPlansFor(name); return L.map(x => `<button class="${big?"btn sm":"pill outline"}" onclick="event.stopPropagation();event.preventDefault();window.sdPlan&&sdPlan('${x[0]}')" title="Open the 30-day plan in साधना">${big?`साधना: ${esc(x[1])}`:L.length>1?esc(x[1].replace(/ Painting$| Art$/,"")):"साधना"} ↗</button>`).join("") };
+// Standard names (16 Nov 2026): साधना plan names are the standard; Madhubani folds into Mithila. Workshop records keep their original names.
+const SD_FOLD = { "madhubani":"Mithila Painting", "mithila":"Mithila Painting", "madhubani mithila":"Mithila Painting", "mithila madhubani":"Mithila Painting" };
+function sdStdName(name){ const f = SD_FOLD[sdKey(name)]; if(f) return f; const L = sdPlansFor(name); return L.length===1 ? L[0][1] : String(name||"").trim(); }
+function sdArtformsTable(t, rows){
+  const ci = Math.max(0, t.fields.findIndex(f=>/count|records/i.test(f)));
+  const groups = new Map();
+  for(const r of rows){ const std = sdStdName(r[0]); const k = std.toLowerCase(); if(!groups.has(k)) groups.set(k, {std, names:[], n:0}); const g = groups.get(k); g.names.push(r[0]); g.n += (+String(r[ci]||"").replace(/[^0-9.]/g,"")||0); }
+  const list = [...groups.values()].sort((a,b)=>a.std.localeCompare(b.std));
+  const missing = g => !sdPlansFor(g.names[0]).length && sdManual(g.names[0])!=="-";
+  const noLink = list.filter(missing), shown = S.ui.sdOnlyMissing ? noLink : list;
+  return `<label class="f"><span>Filter</span><input class="in" type="search" data-ui="wq" value="${attr(S.ui.wq)}"></label><div class="row between"><div class="small muted num">${shown.length} art forms (${t.rows.length} names in the archive) · ${noLink.length} without a साधना link</div><button class="btn sm" onclick="S.ui.sdOnlyMissing=!S.ui.sdOnlyMissing;render()">${S.ui.sdOnlyMissing?"Show all":"Show only without a link"}</button></div>
+    <div class="tablewrap"><table class="aftable"><thead><tr><th>Art form</th><th>साधना</th><th class="num">Records</th></tr></thead><tbody>${shown.map(g=>{ const other = g.names.filter(x=>x!==g.std); const key = g.names.join("||");
+      return `<tr><td class="click"><a href="#" data-wfilter="art" data-v="${attr(key)}">${esc(g.std)}</a>${other.length?`<div class="small muted">as ${other.map(esc).join(" · ")}</div>`:""}</td><td>${sdChips(g.names[0])}<button class="pill" style="border:0;background:none;color:var(--muted,#777)" title="Choose the साधना plan" onclick="event.stopPropagation();sdPick(${attr(JSON.stringify(key))})">${sdPlansFor(g.names[0]).length?"✎":sdManual(g.names[0])==="-"?"—":"＋ link"}</button></td><td class="num">${ci?g.n:""}</td></tr>`; }).join("")}</tbody></table></div>`;
+}
 function addMonths(key, n){ const [y,m] = key.split("-").map(Number); const d = new Date(y, m-1+n, 1); return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; }
 function periodMonths(){ const out=[]; for(let i=0;i<(+S.settings.months||12);i++) out.push(addMonths(S.settings.periodStart||"2026-11", i)); return out; }
 function weekNum(w){ const m = /^Week (\d)$/.exec(w||""); return m ? +m[1] : (w && w.startsWith("Weeks") ? 0 : 9); }
@@ -1630,10 +1645,7 @@ VIEWS.workshops = function(){
   else if(sub==="platforms") body = platformsView();
   else { const key = {teachers:"teachers",platforms:"platforms",artforms:"artforms",map:"artformTeacherMap",recon:"nameReconciliation"}[sub]; const t = W[key]; const q = norm(S.ui.wq);
     const rows = t.rows.filter(r=>!q || norm(r.join(" ")).includes(q));
-    if(sub==="artforms"){ const ci = Math.max(0, t.fields.findIndex(f=>/count|records/i.test(f)));
-      const noLink = rows.filter(r=>!sdPlansFor(r[0]).length && sdManual(r[0])!=="-"); const shown = S.ui.sdOnlyMissing ? noLink : rows;
-      body = `<label class="f"><span>Filter</span><input class="in" type="search" data-ui="wq" value="${attr(S.ui.wq)}"></label><div class="row between"><div class="small muted num">${shown.length} of ${t.rows.length} art forms · ${noLink.length} without a साधना link</div><button class="btn sm" onclick="S.ui.sdOnlyMissing=!S.ui.sdOnlyMissing;render()">${S.ui.sdOnlyMissing?"Show all":"Show only without a link"}</button></div>
-      <div class="tablewrap"><table class="aftable"><thead><tr><th>Art form</th><th>साधना</th><th class="num">Records</th></tr></thead><tbody>${shown.map(r=>`<tr><td class="click"><a href="#" data-wfilter="art" data-v="${attr(r[0])}">${esc(r[0])}</a></td><td>${sdChips(r[0])}<button class="pill" style="border:0;background:none;color:var(--muted,#777)" title="Choose the साधना plan" onclick="event.stopPropagation();sdPick(${attr(JSON.stringify(r[0]))})">${sdPlansFor(r[0]).length?"✎":sdManual(r[0])==="-"?"—":"＋ link"}</button></td><td class="num">${ci?esc(r[ci]):""}</td></tr>`).join("")}</tbody></table></div>`;
+    if(sub==="artforms"){ body = sdArtformsTable(t, rows);
     } else
     body = `<label class="f"><span>Filter</span><input class="in" type="search" data-ui="wq" value="${attr(S.ui.wq)}"></label><div class="small muted num">${rows.length} of ${t.rows.length} rows</div>
       <div class="tablewrap"><table><thead><tr>${t.fields.map(f=>`<th>${esc(f)}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td${i===0&&(sub==="teachers"||sub==="artforms"||sub==="platforms")?` class="click"`:""}>${i===0&&(sub==="teachers"||sub==="artforms"||sub==="platforms")?`<a href="#" ${sub==="teachers"?`data-teacher="${attr(c)}"`:`data-wfilter="${sub==="artforms"?"art":"prov"}" data-v="${attr(c)}"`}>${esc(c)}</a>`:esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`; }
@@ -1643,7 +1655,7 @@ VIEWS.workshops = function(){
 function wsRecords(){
   const f = S.ui.wf; const q = norm(S.ui.wq.trim());
   const uniq = k => [...new Set(IX.wsList.map(w=>w[k]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  const list = IX.wsList.filter(w => (!f.art || w["Art Form / Tradition"]===f.art) && (!f.teacher || wsEff(w).teacher===f.teacher || w["Teacher (reconciled)"]===f.teacher || w["Teacher / Instructor"]===f.teacher) && (!f.prov || wsEff(w).platform===f.prov || w["Provider group"]===f.prov || w["Platform / Provider"]===f.prov) && (!f.type || w["Record Type"]===f.type) && (!f.review || (f.review==="Yes" ? wsNeedsReview(w) : f.review==="mine" ? !!(wsReview(w)&&wsReview(w).status!=="skipped") : !wsNeedsReview(w))) && (!q || w._q.includes(q) || norm(wsEff(w).teacher).includes(q) || norm(getMeta("workshop",w.id).notes).includes(q) || (wsEff(w).edited && norm(Object.values(wsEff(w)).join(" ")).includes(q))));
+  const list = IX.wsList.filter(w => (!f.art || f.art.split("||").includes(w["Art Form / Tradition"])) && (!f.teacher || wsEff(w).teacher===f.teacher || w["Teacher (reconciled)"]===f.teacher || w["Teacher / Instructor"]===f.teacher) && (!f.prov || wsEff(w).platform===f.prov || w["Provider group"]===f.prov || w["Platform / Provider"]===f.prov) && (!f.type || w["Record Type"]===f.type) && (!f.review || (f.review==="Yes" ? wsNeedsReview(w) : f.review==="mine" ? !!(wsReview(w)&&wsReview(w).status!=="skipped") : !wsNeedsReview(w))) && (!q || w._q.includes(q) || norm(wsEff(w).teacher).includes(q) || norm(getMeta("workshop",w.id).notes).includes(q) || (wsEff(w).edited && norm(Object.values(wsEff(w)).join(" ")).includes(q))));
   const shown = list.slice(0, S.ui.wlimit);
   const nOn = Object.values(f).filter(Boolean).length;
   return `<input class="in" type="search" data-ui="wq" value="${attr(S.ui.wq)}" placeholder="Search titles, teachers, art forms, platforms, notes" aria-label="Search workshops">
