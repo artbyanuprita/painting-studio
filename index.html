@@ -861,6 +861,7 @@ function sdPick(key){
     <div class="row" style="margin-top:10px"><button class="btn" onclick="sdSetLink(${attr(JSON.stringify(key))},'-')">No plan for this one</button>${cur?`<button class="btn" onclick="sdSetLink(${attr(JSON.stringify(key))},'')">Back to automatic</button>`:""}<button class="btn" data-sh="close">Close</button></div>`, {});
 }
 window.sdPick = sdPick;
+window.sdToggleMissing = function(){ S.ui.sdOnlyMissing = !S.ui.sdOnlyMissing; render(); };
 window.sdSetLink = function(key, id){ for(const name of String(key).split("||")) saveMeta("sdlink", sdKey(name) || String(name), {sd:id, name}); closeOverlay(true); render(); toast(id==="-" ? "Marked: no plan" : id ? "Linked to साधना" : "Back to automatic"); };
 function sdAuto(name){
   const k = sdKey(name); if(k.length < 3) return [];
@@ -880,7 +881,7 @@ function sdArtformsTable(t, rows){
   const list = [...groups.values()].sort((a,b)=>a.std.localeCompare(b.std));
   const missing = g => !sdPlansFor(g.names[0]).length && sdManual(g.names[0])!=="-";
   const noLink = list.filter(missing), shown = S.ui.sdOnlyMissing ? noLink : list;
-  return `<label class="f"><span>Filter</span><input class="in" type="search" data-ui="wq" value="${attr(S.ui.wq)}"></label><div class="row between"><div class="small muted num">${shown.length} art forms (${t.rows.length} names in the archive) · ${noLink.length} without a साधना link</div><button class="btn sm" onclick="S.ui.sdOnlyMissing=!S.ui.sdOnlyMissing;render()">${S.ui.sdOnlyMissing?"Show all":"Show only without a link"}</button></div>
+  return `<label class="f"><span>Filter</span><input class="in" type="search" data-ui="wq" value="${attr(S.ui.wq)}"></label><div class="row between"><div class="small muted num">${shown.length} art forms (${t.rows.length} names in the archive) · ${noLink.length} without a साधना link</div><button class="btn sm" onclick="window.sdToggleMissing()">${S.ui.sdOnlyMissing?"Show all":"Show only without a link"}</button></div>
     <div class="tablewrap"><table class="aftable"><thead><tr><th>Art form</th><th>साधना</th><th class="num">Records</th></tr></thead><tbody>${shown.map(g=>{ const other = g.names.filter(x=>x!==g.std); const key = g.names.join("||");
       return `<tr><td class="click"><a href="#" data-wfilter="art" data-v="${attr(key)}">${esc(g.std)}</a>${other.length?`<div class="small muted">as ${other.map(esc).join(" · ")}</div>`:""}</td><td>${sdChips(g.names[0])}<button class="pill" style="border:0;background:none;color:var(--muted,#777)" title="Choose the साधना plan" onclick="event.stopPropagation();sdPick(${attr(JSON.stringify(key))})">${sdPlansFor(g.names[0]).length?"✎":sdManual(g.names[0])==="-"?"—":"＋ link"}</button></td><td class="num">${ci?g.n:""}</td></tr>`; }).join("")}</tbody></table></div>`;
 }
