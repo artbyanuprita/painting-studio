@@ -841,8 +841,11 @@ const sdKey = s => String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300
 const SD_IX = SD_PLANS.map(([id,name,short]) => [id, name, sdKey(name), sdKey(short)]);
 // Links Anuprita set by hand (Studio meta "sdlink", synced): plan id, or "-" for "no plan for this one"
 const sdManual = name => (S.meta && S.meta.get ? getMeta("sdlink", sdKey(name) || String(name)).sd : "") || "";
+// Names Anuprita confirmed (16 Nov 2026): Bhil Rajasthan is Bhil painting; Madhubani is the broad term, Mithila the specific one
+const SD_ALIAS = { "bhil rajasthan":["bhil"], "madhubani":["mithila-bharni","mithila-kachni","mithila-tantrik","godna-mithila"], "mithila":["mithila-bharni","mithila-kachni","mithila-tantrik","godna-mithila"], "madhubani mithila":["mithila-bharni","mithila-kachni","mithila-tantrik","godna-mithila"], "mithila madhubani":["mithila-bharni","mithila-kachni","mithila-tantrik","godna-mithila"] };
 function sdPlansFor(name){
   const man = sdManual(name); if(man === "-") return []; if(man){ const x = SD_IX.find(y => y[0]===man); if(x) return [x]; }
+  const al = SD_ALIAS[sdKey(name)]; if(al) return al.map(id => SD_IX.find(y => y[0]===id)).filter(Boolean);
   return sdAuto(name);
 }
 function sdPick(name){
@@ -861,7 +864,7 @@ function sdAuto(name){
   const near = (a, b) => a.length>=5 && (a.includes(b) || b.includes(a)) && Math.min(a.length,b.length) / Math.max(a.length,b.length) >= 0.6;
   return SD_IX.filter(x => near(x[2], k) || near(x[3], k)).slice(0,4);
 }
-const sdChips = (name, big) => sdPlansFor(name).map(x => `<button class="${big?"btn sm":"pill outline"}" onclick="event.stopPropagation();event.preventDefault();window.sdPlan&&sdPlan('${x[0]}')" title="Open the 30-day plan in साधना">${big?`साधना: ${esc(x[1])}`:"साधना"} ↗</button>`).join("");
+const sdChips = (name, big) => { const L = sdPlansFor(name); return L.map(x => `<button class="${big?"btn sm":"pill outline"}" onclick="event.stopPropagation();event.preventDefault();window.sdPlan&&sdPlan('${x[0]}')" title="Open the 30-day plan in साधना">${big?`साधना: ${esc(x[1])}`:L.length>1?esc(x[1].replace(/ Painting$| Art$/,"")):"साधना"} ↗</button>`).join("") };
 function addMonths(key, n){ const [y,m] = key.split("-").map(Number); const d = new Date(y, m-1+n, 1); return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; }
 function periodMonths(){ const out=[]; for(let i=0;i<(+S.settings.months||12);i++) out.push(addMonths(S.settings.periodStart||"2026-11", i)); return out; }
 function weekNum(w){ const m = /^Week (\d)$/.exec(w||""); return m ? +m[1] : (w && w.startsWith("Weeks") ? 0 : 9); }
