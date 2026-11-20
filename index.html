@@ -811,7 +811,7 @@ function recordsView(kind){
 /* ============================================================ state */
 const S = {
   db:null, assets:null, downloads:null, user:null, canWrite:true, ready:false, mode:"connecting",
-  settings:{periodStart:"2026-11", months:12, monthlyTarget:10, defaultStages:DEFAULT_STAGES.slice(), schemaVersion:SCHEMA},
+  settings:{periodStart:"2027-01", months:12, monthlyTarget:10, defaultStages:DEFAULT_STAGES.slice(), schemaVersion:SCHEMA},
   paintings:new Map(), tasks:new Map(), ideas:new Map(), meta:new Map(), resources:new Map(), activity:new Map(), pigments:new Map(), surfaces:new Map(), binders:new Map(), outreach:new Map(), venues:new Map(), ifam:new Map(), journals:new Map(), learning:new Map(),
   ref:{themes:null, workshops:null, artforms:null, resources:null, seed:null, report:null},
   loaded:{paintings:false},
@@ -3852,6 +3852,26 @@ function p5Undo(){ const today = todayISO();
     p.plan5 = "undone"; savePainting(p, 1500); }
   logAct("edit", "Undid the focused plan"); toast("Back to the plan you had before"); render(); }
 { const _r = render; render = function(){ try{ p5Apply(); }catch(e){ console.warn(e); } return _r.apply(this, arguments); }; }
+/* Start in January 2027 (asked 20 Nov 2026): the 48-painting plan keeps its order and 4 a month,
+   moved 2 months later (Nov 2026–Oct 2027 becomes Jan–Dec 2027). Runs once; the flag is in settings, so it syncs. */
+function s27Apply(){
+  if(!S.ready || !S.paintings.size || !p5Done() || (S.settings && S.settings.start2027)) return;
+  if(!p5Apply.t0 || Date.now() - p5Apply.t0 < 3000) return;
+  const today = todayISO(); let moved = 0;
+  for(const p of S.paintings.values()){
+    if(!p.plan5 || p.plan5==="undone" || p.status==="Completed" || !/^\d{4}-\d{2}$/.test(p.month||"")) continue;
+    if(p.month < "2026-11" || p.month > "2027-10") continue;
+    const to = addMonths(p.month, 2);
+    p.history = p.history||[]; p.history.push({date:today, from:{month:p.month, week:p.week}, to:{month:to, week:p.week}, reason:"Start moved to January 2027"});
+    p.month = to; savePainting(p, 2500); moved++;
+  }
+  if(S.settings.periodStart === "2026-11") S.settings.periodStart = "2027-01";
+  S.settings.start2027 = today; saveSettings();
+  logAct("edit", `Start moved to January 2027: ${moved} paintings moved 2 months later, same order, 4 a month`);
+  toast(`Your painting year now starts in January 2027 (${moved} paintings moved 2 months later).`);
+}
+{ const _r = render; render = function(){ try{ s27Apply(); }catch(e){ console.warn(e); } return _r.apply(this, arguments); }; }
+
 function p5Banner(){
   const ps = [...S.paintings.values()]; if(!ps.some(p=>p.plan5 && p.plan5!=="undone")) return "";
   let hide = false; try{ hide = localStorage.getItem("ips-plan5-ok")==="1"; }catch(_){} if(hide) return "";
