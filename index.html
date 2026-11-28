@@ -1968,7 +1968,7 @@ VIEWS.settings = function(){
   <section class="panel"><div class="hd"><h2>Default phases for new paintings</h2></div><div class="bd stack-s"><textarea class="in" data-set="defaultStages" rows="8">${esc((st.defaultStages||DEFAULT_STAGES).join("\n"))}</textarea><div class="small muted">One phase per line. Existing paintings keep their own checklists.</div></div></section>
   <section class="panel"><div class="hd"><h2>Backup and restore</h2></div><div class="bd stack-s">
     <div class="small ink2 num">Stored now: ${counts.paintings} paintings · ${counts.sessions} sessions · ${counts.photos} photos · ${counts.tasks} tasks · ${counts.ideas} ideas · ${counts.resources} resources · ${counts.notes} theme/workshop/art form notes</div>
-    <div class="row"><button class="btn primary" data-act="export-json">Export full backup (JSON)</button><button class="btn" data-act="export-csv">Export paintings (CSV)</button><label class="btn">Restore from backup<input type="file" accept="application/json,.json" data-restore hidden></label></div>
+    <div class="row"><button class="btn primary" data-act="export-json">Export full backup (JSON)</button><button class="btn" data-act="export-csv">Export paintings (CSV)</button><label class="btn">Restore from backup<input type="file" accept="application/json,.json" data-restore hidden></label><label class="btn">Import a painting series<input type="file" accept="application/json,.json,.txt,text/plain" data-plimport hidden></label></div>
     <div class="small muted">The backup holds every record and the IDs of uploaded photos. Records live in the Google Sheet “Indian Painting Studio — Data”; photo files live in each chapter’s Photos folder in Google Drive.</div>
     ${missing?`<div class="row"><button class="btn" data-act="import-missing">Import ${missing} missing source paintings</button><span class="small muted">Adds only IDs not already present; never overwrites.</span></div>`:`<div class="small muted">All ${(S.ref.seed||[]).length} source paintings are present.</div>`}</div></section>
   <section class="panel"><div class="hd"><h2>Import report</h2></div><div class="bd">${R?importReport(R):"Loading…"}</div></section>
@@ -2461,6 +2461,37 @@ function restoreFrom(text){
       if(replace && b.settings) ops.push(["config/settings", b.settings]);
       closeOverlay(true); const n = await bulkWrite(ops, "Restore"); logAct("restore", `Restored ${n} records from backup (${replace?"replace matching":"missing only"})`); render(); } });
 }
+/* Import a painting series from a file made in another chat (24 Nov 2026), e.g. Beyond Borders:
+   {theme, records:[{title, artForm, month, ...} | {action:"rename existing record", title, theme, notes}]}.
+   New records get new P-ids; renames are matched to an existing painting she picks. Titles already here are skipped. */
+function plSuggest(title, used){ const stop = new Set(["traditional","city","or","life","story","the","and","of","in"]);
+  const words = norm(String(title).replace(/^BB-\d+\s*/,"")).split(/[^a-z0-9]+/).filter(w=>w.length>2 && !stop.has(w));
+  let best=null, bs=0; for(const p of S.paintings.values()){ if(used && used.has(p.id)) continue; const t = norm(p.title+" "+(p.subject||"")); const sc = words.reduce((n,w,i)=>n + (t.includes(w) ? (i===0?2:1) : 0), 0); if(sc>bs){ bs=sc; best=p; } }
+  if(best && used) used.add(best.id); return bs ? best.id : ""; }
+async function plImport(file){
+  let J; try{ J = JSON.parse(await file.text()); }catch(e){ toast("That file isn't a painting series file."); return; }
+  const recs = Array.isArray(J) ? J : (J.records||[]); if(!recs.length){ toast("No paintings found in that file."); return; }
+  const have = new Set([...S.paintings.values()].map(p=>norm(p.title)));
+  const renames = recs.filter(r=>/rename/i.test(r.action||"")), news = recs.filter(r=>!r.action);
+  const fresh = news.filter(r=>!have.has(norm(r.title))), dup = news.length - fresh.length;
+  const opts = [...S.paintings.values()].sort((a,b)=>String(a.title).localeCompare(String(b.title)));
+  const byMonth = {}; fresh.forEach(r=>{ const m = r.month||"no month"; byMonth[m]=(byMonth[m]||0)+1; });
+  openSheet("Import " + esc(J.theme||"painting series"), `<div class="stack-s">
+    <div><b>${fresh.length}</b> new paintings to add${dup?`, <span class="muted">${dup} already here (skipped)</span>`:""}${renames.length?`, and <b>${renames.length}</b> existing paintings to rename.`:"."}</div>
+    ${renames.length?`<h3 style="margin:6px 0 0">Which existing painting is each one?</h3>${(()=>{ const used = new Set(); return renames.map((r,i)=>{ const sug = have.has(norm(r.title)) ? "__done" : plSuggest(r.title, used);
+      return `<label class="f full"><span><b>${esc(r.title)}</b></span><select class="in" data-plren="${i}"><option value="">Skip for now</option>${sug==="__done"?`<option value="" selected disabled>Already renamed</option>`:""}${opts.map(p=>`<option value="${attr(p.id)}" ${p.id===sug?"selected":""}>${esc(p.id)} · ${esc(p.title)}</option>`).join("")}</select></label>`; }).join(""); })()}`:""}
+    <details><summary class="small">See the ${fresh.length} new paintings by month</summary><div class="small">${Object.keys(byMonth).sort().map(m=>`${esc(m==="no month"?m:monthLabel(m))}: ${byMonth[m]}`).join(" · ")}</div><ul class="small">${fresh.map(r=>`<li>${esc(r.title)} <span class="muted">· ${esc(r.artForm||"")}${r.dimensions?" · "+esc(r.dimensions):""}</span></li>`).join("")}</ul></details>
+    <div class="small muted">Nothing is deleted. Renamed paintings keep their photos, hours and notes; the series note is added to their notes.</div>
+    <div class="row"><button class="btn primary" data-sh="go">Import</button><button class="btn" data-sh="close">Cancel</button></div></div>`,
+  { go: async () => {
+      const ops = []; let next = +(nextPaintingId().slice(1)); const now = nowISO();
+      for(const r of fresh){ const id = "P"+String(next++).padStart(3,"0"); const {action, ...rest} = r; const n = normPainting({...rest, id}); n.createdAt = now; n.updatedAt = now; ops.push(["paintings/"+id, n]); }
+      document.querySelectorAll("[data-plren]").forEach(sel=>{ const r = renames[+sel.dataset.plren], p = sel.value && S.paintings.get(sel.value); if(!p) return;
+        const q = {...p, title:r.title, theme:r.theme||p.theme, notes:[p.notes, r.notes].filter(Boolean).join("\n"), updatedAt:now}; ops.push(["paintings/"+p.id, q]); });
+      closeOverlay(true); if(!ops.length){ toast("Nothing to import."); return; }
+      const n = await bulkWrite(ops, "Import"); logAct("import", `Imported ${J.theme||"a painting series"}: ${n} records`); toast(`Imported ${n} paintings`); render(); } });
+}
+document.addEventListener("change", e => { const t = e.target; if(t.matches && t.matches("[data-plimport]") && t.files && t.files[0]){ plImport(t.files[0]); t.value=""; } });
 async function importMissing(){
   const miss = (S.ref.seed||[]).filter(p=>!S.paintings.has(p.id)).map(p=>{ const n = normPainting(p); n.createdAt=nowISO(); return ["paintings/"+p.id, n]; });
   if(!miss.length){ toast("All source paintings are already here."); return; }
@@ -5102,6 +5133,7 @@ boot();
   #acct{display:none}
   #savestate[data-s="saved"] span,#savestate[data-s="saving"] span{display:none}
   #savestate{flex:none;padding:6px}#savestate i{width:10px;height:10px}
+  .top>.row.between:has(#savestate:not([data-s="saved"]):not([data-s="saving"])){flex-wrap:wrap}
 }
 .rkbtn{display:flex;align-items:center;gap:8px;width:100%;justify-content:center;margin:0 0 12px;padding:10px 14px;border-radius:12px;border:0;background:#A23A28;color:#F4EBD6;font:600 .9rem inherit;cursor:pointer}
 .rkmiss{font-size:.8rem;opacity:.7;margin:0 0 10px}
